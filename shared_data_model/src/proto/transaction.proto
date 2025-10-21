@@ -1,0 +1,41 @@
+syntax="proto3";
+
+package transaction;
+
+
+
+message Transaction {
+    enum TransactionType {
+        WITHDRAWAL = 0;
+        DEPOSIT = 1;
+        TRANSFER = 2;
+        PAYMENT = 3;
+    };
+
+    enum DeviceUsed {
+        MOBILE = 0;
+        ATM = 1;
+        POS = 2;
+        WEB = 3;
+    };
+
+    enum PaymentChannel {
+        UPI = 0;
+        CARD = 1;
+        ACH = 2;
+        WIRE_TRANSFER = 3;
+    };
+
+    string transaction_id = 1;
+    string sender_account = 2;
+    string timestamp = 3;
+    string receiver_account = 4;
+    float amount = 5;
+    TransactionType transaction_type = 6;
+    string merchant_category = 7;
+    string location = 8;
+    DeviceUsed device_used = 9;
+    PaymentChannel payment_channel = 10;
+    string ip_address = 11;
+    string device_hash = 12;
+}
