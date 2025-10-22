@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package rules;
+
+message CompositeRule {
+    string expression = 1;
+}
