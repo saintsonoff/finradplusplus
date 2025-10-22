@@ -1,3 +1,0 @@
-add_executable(threshold_rule_service main.cpp)
-target_link_libraries(threshold_rule_service PRIVATE threshold_lib threshold_proto)
-set_target_properties(threshold_rule_service PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
