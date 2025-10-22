@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package rules;
+
+message RuleConfig {
+    enum RuleType {
+        ML = 0;
+        COMPOSITE = 1;
+        THRESHOLD = 2;
+        PATTERN = 3;
+    }
+
+    string uuid = 1;
+    string name = 2;
+    RuleType rule_type = 3;
+    bool is_critical = 4;
+    oneof rule {
+        MLRuleConfig ml_rule = 5;
+        CompositeRuleConfig composite_rule = 6;
+        ThresholdRuleConfig threshold_rule = 7;
+        PatternRuleConfig pattern_rule = 8;
+    }
+}

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package rules;
+
+message MLRule {
+    string model_uuid = 1;
+    double lower_bound = 2;
+}
