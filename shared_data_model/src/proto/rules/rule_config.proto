@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package rules;
 
+import "rules/pattern_rule.proto";
+import "rules/threshold_rule.proto";
+import "rules/composite_rule.proto";
+import "rules/ml_rule.proto";
+
 message RuleConfig {
     enum RuleType {
         ML = 0;
@@ -15,9 +20,9 @@ message RuleConfig {
     RuleType rule_type = 3;
     bool is_critical = 4;
     oneof rule {
-        MLRuleConfig ml_rule = 5;
-        CompositeRuleConfig composite_rule = 6;
-        ThresholdRuleConfig threshold_rule = 7;
-        PatternRuleConfig pattern_rule = 8;
+        MLRule ml_rule = 5;
+        CompositeRule composite_rule = 6;
+        ThresholdRule threshold_rule = 7;
+        PatternRule pattern_rule = 8;
     }
 }

@@ -3,7 +3,7 @@ syntax = "proto3";
 package rules;
 
 message PatternRule {
-    int32 max_delta_time = 1
+    int32 max_delta_time = 1;
     int32 max_count = 2;
     string expression = 3;
 }
