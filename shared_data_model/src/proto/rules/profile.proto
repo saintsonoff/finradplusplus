@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package profile;
+
+message Profile {
+    string uuid = 1;
+    string name = 2;
+     email = 3;
+}
