@@ -1,0 +1,10 @@
+set(CMAKE_BUILD_TYPE Debug)
+
+set(CMAKE_CXX_STANDARD 23)
+
+set(CMAKE_MAKE_PROGRAM "/usr/bin/make" CACHE FILEPATH "Make program" FORCE)
+set(CMAKE_C_COMPILER "/usr/local/bin/gcc" CACHE FILEPATH "C compiler" FORCE)
+set(CMAKE_CXX_COMPILER "/usr/local/bin/g++" CACHE FILEPATH "CXX compiler" FORCE)
+
+set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} -O0")
+set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} -O0")
