@@ -1,0 +1,9 @@
+{
+    "version": 4.0,
+    "vendor": {
+        "conan": {}
+    },
+    "include": [
+        "build/build/Release/generators/CMakePresets.json"
+    ]
+}
