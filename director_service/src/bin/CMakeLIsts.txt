@@ -1,12 +1,16 @@
 find_package(
-    userver 
-    COMPONENTS grpc
-    REQUIRED
+    userver
+COMPONENTS
+    grpc
+REQUIRED
 )
 
-set(PROTO_FILE_PATH "${DATA_MODELS_PATH}/transaction")
-userver_add_grpc_library(transaction-proto PROTOS "${PROTO_FILE_PATH}/transaction.proto" SOURCE_PATH "${PROTO_FILE_PATH}")
+add_executable(director_service main.cpp)
 
-add_executable(main_tar main.cpp)
-
-target_link_libraries(main_tar PUBLIC transaction-proto)
+target_link_libraries(
+    director_service
+PUBLIC
+    userver::grpc
+PUBLIC
+    profile_receiver
+)
