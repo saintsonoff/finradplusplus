@@ -1,0 +1,6 @@
+add_subdirectory(rule_interface)
+add_subdirectory(ml_rule)
+add_subdirectory(pattern_rule)
+add_subdirectory(threshold_rule)
+add_subdirectory(rule_factory)
+add_subdirectory(composite_rule)
