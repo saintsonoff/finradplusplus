@@ -1,2 +1,6 @@
 **/build
+
+# ide staff
 **/.devcontainer
+**/.cache
+**/.vscode
