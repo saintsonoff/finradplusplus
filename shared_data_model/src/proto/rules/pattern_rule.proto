@@ -2,8 +2,10 @@ syntax = "proto3";
 
 package rules;
 
+import "expression.proto";
+
 message PatternRule {
     int32 max_delta_time = 1;
     int32 max_count = 2;
-    string expression = 3;
+    Expression expression = 3;
 }

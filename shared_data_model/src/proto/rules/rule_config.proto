@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package rules;
 
-import "rules/pattern_rule.proto";
-import "rules/threshold_rule.proto";
-import "rules/composite_rule.proto";
-import "rules/ml_rule.proto";
+import "pattern_rule.proto";
+import "threshold_rule.proto";
+import "composite_rule.proto";
+import "ml_rule.proto";
 
 message RuleConfig {
     enum RuleType {
