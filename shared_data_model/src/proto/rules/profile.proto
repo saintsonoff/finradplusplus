@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package profile;
 
-import "rules/rule_config.proto";
+import "rule_config.proto";
 
 message Profile {
     string uuid = 1;
     string name = 2;
-    repeated RuleConfig rules = 3;
+    repeated rules.RuleConfig rules = 3;
 }
