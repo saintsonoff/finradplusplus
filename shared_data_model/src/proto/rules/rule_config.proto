@@ -2,10 +2,135 @@ syntax = "proto3";
 
 package rules;
 
-import "pattern_rule.proto";
-import "threshold_rule.proto";
-import "composite_rule.proto";
-import "ml_rule.proto";
+message Expression {
+    oneof expr {
+
+        FieldReference field = 1;
+        LiteralValue literal = 2;
+        
+        AggregateFunction aggregate = 3;
+        
+        ComparisonOperation comparison = 4;
+        
+        LogicalOperation logical = 5;
+        
+        ArithmeticOperation arithmetic = 6;
+    }
+}
+
+message FieldReference {
+    enum FieldType {
+        TRANSACTION_ID = 0;
+        SENDER_ACCOUNT = 1;
+        TIMESTAMP = 2;
+        RECEIVER_ACCOUNT = 3;
+        AMOUNT = 4;
+        TRANSACTION_TYPE = 5;
+        MERCHANT_CATEGORY = 6;
+        LOCATION = 7;
+        DEVICE_USED = 8;
+        PAYMENT_CHANNEL = 9;
+        IP_ADDRESS = 10;
+        DEVICE_HASH = 11;
+    }
+    
+    FieldType field = 1;
+}
+
+message LiteralValue {
+    oneof value {
+        string string_value = 1;
+        float float_value = 2;
+        int32 int_value = 3;
+        bool bool_value = 4;
+    }
+}
+
+message AggregateFunction {
+    enum AggregateType {
+        COUNT = 0;
+        SUM = 1;
+        AVG = 2;
+        MIN = 3;
+        MAX = 4;
+        COUNT_DISTINCT = 5;
+    }
+    
+    AggregateType function = 1;
+    Expression operand = 2;
+    string alias = 3;
+}
+
+message ComparisonOperation {
+    enum Operator {
+        EQUAL = 0;
+        NOT_EQUAL = 1;
+        GREATER_THAN = 2;
+        GREATER_THAN_OR_EQUAL = 3;
+        LESS_THAN = 4;
+        LESS_THAN_OR_EQUAL = 5;
+        LIKE = 6;
+        IN = 7;
+    }
+    
+    Operator operator = 1;
+    Expression left = 2;
+    Expression right = 3;
+}
+
+message LogicalOperation {
+    enum Operator {
+        AND = 0;
+        OR = 1;
+        NOT = 2;
+    }
+    
+    Operator operator = 1;
+    repeated Expression operands = 2;
+}
+
+message ArithmeticOperation {
+    enum Operator {
+        ADD = 0;
+        SUBTRACT = 1;
+        MULTIPLY = 2;
+        DIVIDE = 3;
+        MODULO = 4;
+    }
+    
+    Operator operator = 1;
+    Expression left = 2;
+    Expression right = 3;
+}
+
+
+
+
+
+
+message CompositeRule {
+    Expression expression = 1;
+}
+
+
+
+
+message MLRule {
+    string model_uuid = 1;
+    double lower_bound = 2;
+}
+
+
+
+message PatternRule {
+    int32 max_delta_time = 1;
+    int32 max_count = 2;
+    Expression expression = 3;
+}
+
+message ThresholdRule {
+    Expression expression = 1;
+}
 
 message RuleConfig {
     enum RuleType {
