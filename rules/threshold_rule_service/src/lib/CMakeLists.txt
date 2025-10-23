@@ -1,3 +1,0 @@
-add_library(threshold_lib threshold_validator.cpp)
-target_include_directories(threshold_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(threshold_lib PUBLIC threshold_proto)

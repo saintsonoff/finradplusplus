@@ -1,7 +1,9 @@
 syntax = "proto3";
 
-import "rules/rule_config.proto";
+package rules;
+
+import "expression.proto";
 
 message ThresholdRule {
-    string expression = 1;
+    Expression expression = 1;
 }
