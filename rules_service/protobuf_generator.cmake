@@ -3,7 +3,9 @@ get_filename_component(DATA_MODELS_PATH "${CMAKE_SOURCE_DIR}/../shared_data_mode
 userver_add_grpc_library(transaction-proto PROTOS "${DATA_MODELS_PATH}/transaction/transaction.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
 userver_add_grpc_library(rule-config-proto PROTOS "${DATA_MODELS_PATH}/rules/rule_config.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
 userver_add_grpc_library(rule-request-proto PROTOS "${DATA_MODELS_PATH}/rules/rule_request.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
-userver_add_grpc_library(rule-response-proto PROTOS "${DATA_MODELS_PATH}/rules/rule_response.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
+userver_add_grpc_library(rule-result-proto PROTOS "${DATA_MODELS_PATH}/rules/rule_result.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
+userver_add_grpc_library(result-service-proto PROTOS "${DATA_MODELS_PATH}/rules/result_service.proto" SOURCE_PATH "${DATA_MODELS_PATH}")
 
 target_link_libraries(rule-request-proto PUBLIC rule-config-proto transaction-proto)
+target_link_libraries(result-service-proto PUBLIC rule-result-proto)
 

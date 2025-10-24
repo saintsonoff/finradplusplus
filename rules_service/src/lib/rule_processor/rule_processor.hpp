@@ -4,11 +4,13 @@
 #include <userver/components/component_context.hpp>
 #include <userver/components/loggable_component_base.hpp>
 #include <userver/kafka/consumer_component.hpp>
-#include <userver/kafka/producer_component.hpp>
 #include <userver/storages/redis/client.hpp>
+#include <userver/clients/dns/component.hpp>
+#include <userver/clients/http/component.hpp>
 
 #include <rules/rule_request.pb.h>
-#include <rules/rule_response.pb.h>
+#include <rules/rule_result.pb.h>
+#include <rules/result_service.grpc.pb.h>
 #include "rule_factory/rule_factory.hpp"
 #include "transaction_history/transaction_history_service.hpp"
 
@@ -23,20 +25,22 @@ public:
 
     ~RuleProcessor() override;
 
+    RuleProcessor(const RuleProcessor&) = delete;
+    RuleProcessor& operator=(const RuleProcessor&) = delete;
+
 private:
     void ProcessMessage(const std::string& message);
+    void SendResultToService(const rules::RuleReult& result);
     
     userver::kafka::ConsumerComponent& consumer_;
-    userver::kafka::ProducerComponent& producer_;
     
     std::string request_topic_;
-    std::string response_topic_;
+    std::string result_service_endpoint_;
     
-    // Keep consumer scope alive to receive messages
     userver::kafka::ConsumerScope consumer_scope_;
     
-    // Transaction history service for Redis
     std::shared_ptr<TransactionHistoryService> history_service_;
+    std::unique_ptr<rules::ResultService::Stub> result_service_stub_;
 };
 
 }  // namespace fraud_detection
