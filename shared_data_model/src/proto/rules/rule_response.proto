@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package responses;
+package rules;
 
 message RuleResponse {
     enum Status {

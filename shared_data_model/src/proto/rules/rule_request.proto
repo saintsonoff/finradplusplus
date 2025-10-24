@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package requests;
+package rules;
 
 import "rules/rule_config.proto";
 import "transaction/transaction.proto";

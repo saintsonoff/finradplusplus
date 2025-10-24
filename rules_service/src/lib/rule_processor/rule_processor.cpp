@@ -44,11 +44,11 @@ RuleProcessor::~RuleProcessor() {
 
 void RuleProcessor::ProcessMessage(const std::string& message) {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
-    requests::RuleRequest request;
+    rules::RuleRequest request;
     if (!request.ParseFromString(message)) {
         LOG_ERROR() << "Failed to parse RuleRequest from message";
-        responses::RuleResponse error_response;
-        error_response.set_status(responses::RuleResponse::ERROR);
+        rules::RuleResponse error_response;
+        error_response.set_status(rules::RuleResponse::ERROR);
         error_response.set_description("Failed to parse request");
         std::string serialized;
         error_response.SerializeToString(&serialized);
@@ -57,7 +57,7 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
     }
     LOG_INFO() << "Processing rule: " << request.rule().uuid() 
                << " for transaction: " << request.transaction().transaction_id();
-    responses::RuleResponse response;
+    rules::RuleResponse response;
     response.set_rule_uuid(request.rule().uuid());
     try {
         if (history_service_) {
@@ -68,12 +68,12 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
         auto rule = RuleFactory::CreateRuleByType(request.rule(), history_service_);
         bool is_fraud = rule->IsFraudTransaction(request.transaction());
         if (is_fraud) {
-            response.set_status(responses::RuleResponse::FRAUD);
+            response.set_status(rules::RuleResponse::FRAUD);
             response.set_description("Transaction flagged as fraudulent by rule: " + request.rule().name());
             LOG_WARNING() << "FRAUD detected for transaction: " << request.transaction().transaction_id()
                          << " by rule: " << request.rule().uuid();
         } else {
-            response.set_status(responses::RuleResponse::NOT_FRAUD);
+            response.set_status(rules::RuleResponse::NOT_FRAUD);
             response.set_description("Transaction passed fraud check");
             LOG_INFO() << "Transaction " << request.transaction().transaction_id() 
                       << " is NOT FRAUD according to rule: " << request.rule().uuid();
@@ -81,7 +81,7 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error evaluating rule " << request.rule().uuid() 
                    << ": " << e.what();
-        response.set_status(responses::RuleResponse::ERROR);
+        response.set_status(rules::RuleResponse::ERROR);
         response.set_description(std::string("Error evaluating rule: ") + e.what());
     }
     std::string serialized_response;

@@ -7,8 +7,8 @@
 #include <userver/kafka/producer_component.hpp>
 #include <userver/storages/redis/client.hpp>
 
-#include <requests/rule_request.pb.h>
-#include <responses/rule_response.pb.h>
+#include <rules/rule_request.pb.h>
+#include <rules/rule_response.pb.h>
 #include "rule_factory/rule_factory.hpp"
 #include "transaction_history/transaction_history_service.hpp"
 
