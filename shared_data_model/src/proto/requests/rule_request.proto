@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package requests;
+
+import "rules/rule_config.proto";
+import "transaction/transaction.proto";
+
+message RuleRequest {
+    transaction.Transaction transaction = 1;
+    rules.RuleConfig rule = 2;
+}
