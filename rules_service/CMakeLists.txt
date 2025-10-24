@@ -7,8 +7,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(
     userver
-    COMPONENTS grpc
+    COMPONENTS grpc kafka redis
     REQUIRED
 )
+
+include(protobuf_generator.cmake)
 
 add_subdirectory(src)

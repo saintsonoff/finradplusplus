@@ -1,0 +1,88 @@
+# yaml
+components_manager:
+    components:
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stdout'
+                    level: info
+                    overflow_behavior: discard
+
+        dns-client:
+            fs-task-processor: fs-task-processor
+
+        secdist:
+            provider: default-secdist-provider
+            
+        default-secdist-provider:
+            config: configs/secdist.json
+            missing-ok: true
+
+        testsuite-support:
+
+        redis:
+            groups:
+              - config_name: transaction-history
+                db: transaction-history
+                sharding_strategy: RedisStandalone
+            subscribe_groups: []
+            thread_pools:
+                redis_thread_pool_size: 8
+                sentinel_thread_pool_size: 1
+            
+        server:
+            listener:
+                port: 8080
+                task_processor: main-task-processor
+            listener-monitor:
+                port: 8086
+                task_processor: monitor-task-processor
+
+        kafka-consumer:
+            group_id: fraud-detection-service
+            topics:
+                - Request
+            auto_offset_reset: earliest
+            security_protocol: PLAINTEXT
+            rd_kafka_custom_options:
+                bootstrap.servers: localhost:9092
+                enable.auto.commit: true
+
+        kafka-producer:
+            delivery_timeout: 5s
+            queue_buffering_max: 1s
+            security_protocol: PLAINTEXT
+            rd_kafka_custom_options:
+                bootstrap.servers: localhost:9092
+
+        rule-processor:
+
+    task_processors:
+        main-task-processor:
+            worker_threads: 4
+
+        fs-task-processor:
+            worker_threads: 2
+
+        monitor-task-processor:
+            worker_threads: 1
+            thread_name: mon
+
+        consumer-task-processor:
+            worker_threads: 2
+            thread_name: cons
+
+        consumer-blocking-task-processor:
+            worker_threads: 2
+            thread_name: cblk
+
+        producer-task-processor:
+            worker_threads: 2
+            thread_name: prod
+
+        producer-blocking-task-processor:
+            worker_threads: 2
+            thread_name: pblk
+
+    default_task_processor: main-task-processor

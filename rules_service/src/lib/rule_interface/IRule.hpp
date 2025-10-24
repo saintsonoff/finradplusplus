@@ -1,8 +1,9 @@
 #pragma once
 
 #include <memory>
-#include "rule_config.pb.h"
-#include "transaction.pb.h"
+#include <transaction/transaction.pb.h>
+
+namespace fraud_detection {
 
 class IRule {
 public:
@@ -13,3 +14,5 @@ public:
 };
 
 using RulePtr = std::unique_ptr<IRule>;
+
+}
