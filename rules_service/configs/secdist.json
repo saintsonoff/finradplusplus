@@ -1,0 +1,17 @@
+{
+    "redis_settings": {
+        "transaction-history": {
+            "password": "",
+            "sentinels": [{"host": "localhost", "port": 6379}],
+            "shards": [{"name": "transaction-history"}]
+        }
+    },
+    "kafka_settings": {
+        "kafka-consumer": {
+            "brokers": "localhost:9092"
+        },
+        "kafka-producer": {
+            "brokers": "localhost:9092"
+        }
+    }
+}

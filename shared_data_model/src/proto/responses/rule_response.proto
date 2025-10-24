@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package responses;
+
+message RuleResponse {
+    enum Status {
+        ERROR = 0;
+        NOT_FRAUD = 1;
+        FRAUD = 2;
+    }
+
+    string rule_uuid = 1;
+    Status status = 2;
+    string description = 3;
+};

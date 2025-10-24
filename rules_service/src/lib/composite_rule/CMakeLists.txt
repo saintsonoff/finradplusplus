@@ -9,6 +9,6 @@ target_include_directories(composite_rule PUBLIC
 
 target_link_libraries(composite_rule PUBLIC
     IRule
-    rule_config_proto
-    composite_proto
+    rule-config-proto
+    rule_utils
 )
