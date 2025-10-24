@@ -1,4 +1,5 @@
 add_subdirectory(profile_receiver)
+add_subdirectory(transaction_receiver)
 
 # find_package(
 #     userver

@@ -13,4 +13,5 @@ PUBLIC
     userver::grpc
 PUBLIC
     profile_receiver
+    transaction_receiver
 )

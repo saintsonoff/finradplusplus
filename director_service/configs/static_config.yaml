@@ -5,7 +5,7 @@ components_manager:
             loggers:
                 default:
                     file_path: '@stderr'
-                    level: debug
+                    level: info
                     overflow_behavior: discard
 
         grpc-server:
@@ -14,9 +14,13 @@ components_manager:
         grpc-server-middlewares-pipeline:
             middlewares: {}
 
-        profile-service:
+        profile-receiver-service:
             task-processor: main-task-processor
-            profile-prefix: profile-prefix
+            profile-prefix: profile
+
+        transaction-receiver-service:
+            task-processor: main-task-processor
+            transaction-prefix: transaction
 
         server:
             listener:

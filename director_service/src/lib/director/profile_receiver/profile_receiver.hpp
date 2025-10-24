@@ -13,7 +13,6 @@
 
 // self
 #include <profile_service.usrv.pb.hpp>
-#include <google/protobuf/empty.pb.h>
 
 
 namespace director_service {
@@ -21,19 +20,11 @@ namespace director_service {
 
 class ProfileReceiver final : public profile::ProfileServiceBase {
 public:
-    explicit ProfileReceiver(std::string prefix) : _prefix(prefix) {  };
+    explicit ProfileReceiver(std::string prefix);
 
-    ProcessProfileStreamResult ProcessProfileStream(CallContext&, ProcessProfileStreamReader& reader) override {
-        profile::Profile request;
-        while (reader.Read(request)) {
-            LOG_INFO() << fmt::format("receive new profile, name: {} uuid: {}", request.name(), request.uuid());
-        }
+    ProcessProfileStreamResult ProcessProfileStream(CallContext&, ProcessProfileStreamReader& reader) override;
 
-        google::protobuf::Empty response;
-        return response;
-    }
-
-    ~ProfileReceiver() override {  }
+    ~ProfileReceiver() override;
 private:
     const std::string _prefix;
 };
@@ -42,28 +33,16 @@ private:
 
 class ProfileReceiverComponent final : public ugrpc::server::ServiceComponentBase {
 public:
-    static constexpr std::string_view kName = "profile-service";
+    static constexpr std::string_view kName = "profile-receiver-service";
 
     ProfileReceiverComponent(
         const components::ComponentConfig& config,
         const components::ComponentContext& context
-    ) : ugrpc::server::ServiceComponentBase(config, context), _service(config["profile-prefix"].As<std::string>()) {
-        RegisterService(_service);
-    }
+    );
 
-static yaml_config::Schema GetStaticConfigSchema() {
-    return yaml_config::MergeSchemas<ugrpc::server::ServiceComponentBase>(R"(
-type: object
-description: gRPC profile get service component
-additionalProperties: false
-properties:
-    profile-prefix:
-        type: string
-        description: profile prefix
-)");
-}
+static yaml_config::Schema GetStaticConfigSchema();
 
-    ~ProfileReceiverComponent() override {  }
+    ~ProfileReceiverComponent() override = default;
 private:
     ProfileReceiver _service;
 };

@@ -2,7 +2,11 @@ syntax="proto3";
 
 package transaction;
 
+import "google/protobuf/empty.proto";
 
+service TransactionService {
+    rpc ProcessTransaction(Transaction) returns (google.protobuf.Empty);
+}
 
 message Transaction {
     enum TransactionType {
