@@ -8,10 +8,10 @@
     },
     "kafka_settings": {
         "kafka-consumer": {
-            "brokers": "localhost:9092"
+            "brokers": "localhost:9093"
         },
         "kafka-producer": {
-            "brokers": "localhost:9092"
+            "brokers": "localhost:9093"
         }
     }
 }

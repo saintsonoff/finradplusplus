@@ -46,7 +46,7 @@ components_manager:
             auto_offset_reset: earliest
             security_protocol: PLAINTEXT
             rd_kafka_custom_options:
-                bootstrap.servers: localhost:9092
+                bootstrap.servers: localhost:9093
                 enable.auto.commit: true
 
         kafka-producer:

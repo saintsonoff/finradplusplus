@@ -9,7 +9,8 @@ target_link_libraries(rule_processor
         userver::redis
         rule_factory
         rule-request-proto
-        rule-response-proto
+        rule-result-proto
+        result-service-proto
         transaction_history
 )
 

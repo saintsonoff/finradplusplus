@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package rules;
+
+message RuleReult {
+    enum Status {
+        ERROR = 0;
+        NOT_FRAUD = 1;
+        FRAUD = 2;
+    }
+    string profile_uuid = 1;
+    string profile_name = 2;
+    string config_uiid = 3;
+    string config_name = 4;
+    Status status = 5;
+};
