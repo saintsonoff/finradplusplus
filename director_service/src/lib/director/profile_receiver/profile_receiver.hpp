@@ -12,7 +12,7 @@
 #include <fmt/format.h>
 
 // self
-#include <profile_service.usrv.pb.hpp>
+#include <rules/profile_service.usrv.pb.hpp>
 
 
 namespace director_service {

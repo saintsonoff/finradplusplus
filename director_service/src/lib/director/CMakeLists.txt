@@ -17,7 +17,9 @@ target_link_libraries(
 PUBLIC
     userver::kafka
 PUBLIC
-    # transaction-proto
-    # rule_config-proto
-    # rule_profile-proto
+    rule_request_producer
+PUBLIC
+    transaction-proto
+    rule_profile-proto
+    rule_config-proto
 )

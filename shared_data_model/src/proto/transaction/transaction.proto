@@ -14,21 +14,21 @@ message Transaction {
         DEPOSIT = 1;
         TRANSFER = 2;
         PAYMENT = 3;
-    };
+    }
 
     enum DeviceUsed {
         MOBILE = 0;
         ATM = 1;
         POS = 2;
         WEB = 3;
-    };
+    }
 
     enum PaymentChannel {
         UPI = 0;
         CARD = 1;
         ACH = 2;
         WIRE_TRANSFER = 3;
-    };
+    }
 
     string transaction_id = 1;
     string sender_account = 2;

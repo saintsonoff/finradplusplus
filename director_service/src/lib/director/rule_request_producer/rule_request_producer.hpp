@@ -3,7 +3,7 @@
 
 // stdcpp
 #include <utility>
-#include <string>
+#include <string_view>
 
 // userver
 #include <userver/kafka/producer.hpp>
@@ -26,18 +26,18 @@ public:
     };
 
 public:
-    RuleRequestProducer(std::string topic_name);
+    constexpr RuleRequestProducer() = default;
 
 public:
     std::pair<size_t, SendStatus> operator()(
+        const std::string& topic,
         const userver::kafka::Producer& producer,
-        profile::Profile profile,
-        transaction::Transaction transaction
-    );
-
-private:
-    std::string _topic;
+        profile::Profile& profile,
+        transaction::Transaction& transaction
+    ) const;
 };
 
+
+inline constexpr RuleRequestProducer kRuleRequestProducer = {};
 
 } // namespace director_service
