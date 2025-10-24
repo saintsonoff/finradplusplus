@@ -5,7 +5,6 @@
 #include <string_view>
 
 // userver
-#include <transaction.pb.h>
 #include <userver/utest/using_namespace_userver.hpp>
 #include <userver/ugrpc/server/service_component_base.hpp>
 
@@ -13,6 +12,7 @@
 #include <fmt/format.h>
 
 // self
+#include <transaction.pb.h>
 #include <transaction_service.usrv.pb.hpp>
 
 

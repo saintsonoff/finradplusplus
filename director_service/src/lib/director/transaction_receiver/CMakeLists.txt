@@ -13,5 +13,6 @@ target_link_libraries(
     transaction_receiver
 PUBLIC
     transaction-proto
+PUBLIC
     userver::grpc
 )

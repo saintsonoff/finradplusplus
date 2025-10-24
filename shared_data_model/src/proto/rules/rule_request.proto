@@ -6,6 +6,10 @@ import "rules/rule_config.proto";
 import "transaction/transaction.proto";
 
 message RuleRequest {
-    transaction.Transaction transaction = 1;
-    rules.RuleConfig rule = 2;
+    uint64 total_rule_count = 1;
+    uint64 number = 2;
+    transaction.Transaction transaction = 3;
+    rules.RuleConfig rule = 4;
+    string profile_name = 5;
+    string profile_uuid = 6;
 }

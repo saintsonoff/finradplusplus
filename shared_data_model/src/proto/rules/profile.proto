@@ -4,7 +4,7 @@ package profile;
 
 import "google/protobuf/empty.proto";
 
-import "rule_config.proto";
+import "rules/rule_config.proto";
 
 service ProfileService {
     rpc ProcessProfileStream(stream Profile) returns (google.protobuf.Empty);

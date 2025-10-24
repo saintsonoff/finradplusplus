@@ -13,5 +13,6 @@ target_link_libraries(
     profile_receiver
 PUBLIC
     rule_profile-proto
+PUBLIC
     userver::grpc
 )
