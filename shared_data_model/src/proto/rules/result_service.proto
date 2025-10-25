@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rules;
+
+import "rules/rule_result.proto";
+
+service ResultService {
+    rpc SendResult(RuleReult) returns (SendResultResponse);
+}
+
+message SendResultResponse {
+    bool success = 1;
+    string message = 2;
+}
