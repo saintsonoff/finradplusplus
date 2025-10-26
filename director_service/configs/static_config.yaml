@@ -12,7 +12,7 @@ components_manager:
                 default:
                     file_path: '@stderr'
                     level: $LOG_LEVEL
-                    level#fallback: warning
+                    level#fallback: info
                     overflow_behavior: discard
                     format: $LOG_FORMAT
                     format#fallback: raw

@@ -7,3 +7,10 @@
 
 # secret staff
 **/.env
+
+# Django stuff
+**/*.sqlite3
+
+# python struff
+**/__pycache__/
+**/*.pyc
