@@ -136,6 +136,8 @@ services:
       context: .
       dockerfile: rules_service/Dockerfile
     container_name: rules-service
+    volumes:
+      - ./rules_service/model_configs:/rules_service/model_configs
     networks:
       - app-network
     environment:
