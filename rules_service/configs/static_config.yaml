@@ -21,15 +21,11 @@ components_manager:
 
         testsuite-support:
 
-        redis:
-            groups:
-              - config_name: transaction-history
-                db: transaction-history
-                sharding_strategy: RedisStandalone
-            subscribe_groups: []
-            thread_pools:
-                redis_thread_pool_size: 8
-                sentinel_thread_pool_size: 1
+        postgres-db-1:
+            dbconnection: 'postgresql://postgres:postgres@localhost:5432/it_cup_onecode'
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
             
         server:
             listener:
@@ -46,7 +42,7 @@ components_manager:
             auto_offset_reset: earliest
             security_protocol: PLAINTEXT
             rd_kafka_custom_options:
-                bootstrap.servers: localhost:9093
+                bootstrap.servers: localhost:19092
                 enable.auto.commit: true
 
         kafka-producer:
@@ -54,9 +50,10 @@ components_manager:
             queue_buffering_max: 1s
             security_protocol: PLAINTEXT
             rd_kafka_custom_options:
-                bootstrap.servers: localhost:9092
+                bootstrap.servers: localhost:19092
 
         rule-processor:
+            ml_model_config_dir: /workspaces/repozitorij-dlya-raboty-7408/rules_service/model_configs
 
     task_processors:
         main-task-processor:

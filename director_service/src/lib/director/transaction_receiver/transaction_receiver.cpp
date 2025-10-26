@@ -1,7 +1,7 @@
 #include "transaction_receiver.hpp"
 
 // userver
-#include <transaction.pb.h>
+#include <transaction/transaction.pb.h>
 #include <userver/utest/using_namespace_userver.hpp>
 
 #include <userver/logging/log.hpp> 
@@ -10,7 +10,7 @@
 #include <google/protobuf/empty.pb.h>
 
 // self
-#include <transaction_service.usrv.pb.hpp>
+#include <transaction/transaction_service.usrv.pb.hpp>
 
 namespace director_service {
 

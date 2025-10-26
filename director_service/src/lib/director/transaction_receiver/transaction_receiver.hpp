@@ -12,8 +12,8 @@
 #include <fmt/format.h>
 
 // self
-#include <transaction.pb.h>
-#include <transaction_service.usrv.pb.hpp>
+#include <transaction/transaction.pb.h>
+#include <transaction/transaction_service.usrv.pb.hpp>
 
 
 namespace director_service {

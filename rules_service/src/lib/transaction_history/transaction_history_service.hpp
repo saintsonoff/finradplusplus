@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
-#include <userver/storages/redis/client.hpp>
+#include <userver/storages/postgres/cluster.hpp>
 #include <transaction/transaction.pb.h>
 
 namespace fraud_detection {
@@ -11,7 +11,7 @@ namespace fraud_detection {
 class TransactionHistoryService {
 public:
     explicit TransactionHistoryService(
-        userver::storages::redis::ClientPtr redis_client);
+        userver::storages::postgres::ClusterPtr pg_cluster);
     virtual ~TransactionHistoryService() = default;
     virtual void SaveTransaction(const transaction::Transaction& tx);
     virtual std::vector<transaction::Transaction> GetAccountHistory(
@@ -23,9 +23,15 @@ public:
         int limit = 100) const;
 
 private:
-    std::string MakeAccountKey(const std::string& account_id) const;
-    userver::storages::redis::ClientPtr redis_client_;
-    static constexpr std::chrono::seconds kTransactionTTL{7 * 24 * 3600};
+    std::string TransactionTypeToString(transaction::Transaction::TransactionType type) const;
+    std::string DeviceUsedToString(transaction::Transaction::DeviceUsed device) const;
+    std::string PaymentChannelToString(transaction::Transaction::PaymentChannel channel) const;
+    
+    transaction::Transaction::TransactionType StringToTransactionType(const std::string& str) const;
+    transaction::Transaction::DeviceUsed StringToDeviceUsed(const std::string& str) const;
+    transaction::Transaction::PaymentChannel StringToPaymentChannel(const std::string& str) const;
+    
+    userver::storages::postgres::ClusterPtr pg_cluster_;
 };
 
 }

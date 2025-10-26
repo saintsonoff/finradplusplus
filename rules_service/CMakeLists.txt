@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(
     userver
-    COMPONENTS grpc kafka redis
+    COMPONENTS grpc kafka redis postgresql
     REQUIRED
 )
 

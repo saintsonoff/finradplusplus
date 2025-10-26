@@ -3,7 +3,7 @@
 
 // stdcpp
 #include <utility>
-#include <string>
+#include <string_view>
 
 // userver
 #include <userver/kafka/producer.hpp>
@@ -17,15 +17,12 @@
 namespace director_service {
 
 
-RuleRequestProducer::RuleRequestProducer(std::string topic_name)
-    : _topic(std::move(topic_name)) {  };
-
-
 std::pair<size_t, RuleRequestProducer::SendStatus> RuleRequestProducer::operator()(
+  const std::string& topic,
   const userver::kafka::Producer& producer,
-  profile::Profile profile,
-  transaction::Transaction transaction
-) {
+  profile::Profile& profile,
+  transaction::Transaction& transaction
+) const {
     size_t sended_count = 0;
 
     auto send_request = [
@@ -50,7 +47,7 @@ std::pair<size_t, RuleRequestProducer::SendStatus> RuleRequestProducer::operator
                 return SendStatus::kErrorSerializationNonRetryable;
             }
 
-            producer.Send(_topic, key, message);
+            producer.Send(topic, key, message);
             return SendStatus::kSuccess;
         } catch (const userver::kafka::SendException& ex) {
             return ex.IsRetryable() ? SendStatus::kErrorRetryable : SendStatus::kErrorNonRetryable;

@@ -11,6 +11,9 @@ target_include_directories(rule_request_producer PUBLIC ${CMAKE_CURRENT_SOURCE_D
 target_link_libraries(
     rule_request_producer
 PUBLIC
+    transaction-proto
+    rule_profile-proto
+    rule_config-proto
     rule_request-proto
 PUBLIC
     userver::kafka

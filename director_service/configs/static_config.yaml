@@ -1,4 +1,10 @@
 components_manager:
+    coro_pool:
+        initial_size: 500
+        max_size: 1000
+        stack_size: 262144
+        stack_usage_monitor_enabled: false
+        
     components:
         logging:
             fs-task-processor: fs-task-processor
@@ -7,6 +13,25 @@ components_manager:
                     file_path: '@stderr'
                     level: info
                     overflow_behavior: discard
+
+        secdist:
+            provider: default-secdist-provider
+            
+        default-secdist-provider:
+            config: configs/secdist.json
+            missing-ok: true
+
+        kafka-producer:
+            delivery_timeout: 5s
+            queue_buffering_max: 1s
+            enable_idempotence: true
+            security_protocol: PLAINTEXT
+            operation_log_level: warning
+            rd_kafka_custom_options:
+                bootstrap.servers: kafka:29092
+
+        director-producer:
+            topic: "my-first-topic"
 
         grpc-server:
             port: 8030
@@ -35,6 +60,10 @@ components_manager:
         grpc-blocking-task-processor:
             worker_threads: 2
             thread_name: grpc-worker
+
+        producer-task-processor:
+            worker_threads: 2
+            thread_name: producer
 
         main-task-processor:
             worker_threads: 8

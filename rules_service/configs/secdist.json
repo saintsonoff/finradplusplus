@@ -1,17 +1,24 @@
 {
-    "redis_settings": {
-        "transaction-history": {
-            "password": "",
-            "sentinels": [{"host": "localhost", "port": 6379}],
-            "shards": [{"name": "transaction-history"}]
+    "postgresql_settings": {
+        "databases": {
+            "postgres-db-1": [
+                {
+                    "shard_number": 0,
+                    "host": "localhost",
+                    "port": 5432,
+                    "dbname": "it_cup_onecode",
+                    "user": "postgres",
+                    "password": "postgres"
+                }
+            ]
         }
     },
     "kafka_settings": {
         "kafka-consumer": {
-            "brokers": "localhost:9093"
+            "brokers": "localhost:19093"
         },
         "kafka-producer": {
-            "brokers": "localhost:9093"
+            "brokers": "localhost:19092"
         }
     }
 }
