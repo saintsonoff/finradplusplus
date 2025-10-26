@@ -220,3 +220,4 @@ volumes:
   postgres-data:
   loki-data:
   grafana-data:
+  admin-static:
