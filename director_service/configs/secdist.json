@@ -1,7 +1,0 @@
-{
-    "kafka_settings": {
-        "kafka-producer": {
-            "brokers": "kafka:29092"
-        }
-    }
-}
