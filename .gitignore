@@ -5,7 +5,7 @@
 **/.cache
 **/.vscode
 
-# secret staff
+# env staff
 **/.env
 
 # Django stuff
@@ -14,3 +14,6 @@
 # python struff
 **/__pycache__/
 **/*.pyc
+
+# userver stuff
+**/secdist.json

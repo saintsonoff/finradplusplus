@@ -75,6 +75,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./shared_data_model/src/migrations:/docker-entrypoint-initdb.d
 
   director-service:
     build:
@@ -111,7 +112,7 @@ services:
       - DIRECTOR_GRPC_ADDRESS=director-service:8030
       - ALLOWED_HOSTS=localhost,127.0.0.1,admin-panel
     volumes:
-      - admin-panel-db:/app/db-data
+      - ./AdminPanel/db.sqlite3:/app/db.sqlite3
       - ./AdminPanel/staticfiles:/app/staticfiles
     depends_on:
       - director-service
@@ -198,4 +199,3 @@ volumes:
   postgres-data:
   loki-data:
   grafana-data:
-  admin-panel-db:

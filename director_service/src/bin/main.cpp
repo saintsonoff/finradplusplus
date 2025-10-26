@@ -1,8 +1,9 @@
 // userver
+#include <userver/utils/daemon_run.hpp>
+
 #include <userver/ugrpc/server/component_list.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/congestion_control/component.hpp>
-#include <userver/utils/daemon_run.hpp>
 #include <userver/storages/secdist/component.hpp>
 #include <userver/storages/secdist/provider_component.hpp>
 
