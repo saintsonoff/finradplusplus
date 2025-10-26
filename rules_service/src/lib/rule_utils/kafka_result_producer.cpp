@@ -1,5 +1,7 @@
 #include "kafka_result_producer.hpp"
 
+#include <google/protobuf/util/json_util.h>
+
 #include <userver/logging/log.hpp>
 
 namespace fraud_detection {
@@ -10,8 +12,9 @@ KafkaResultProducer::KafkaResultProducer(userver::kafka::ProducerComponent& prod
 
 void KafkaResultProducer::SendResult(const rules::RuleResult& result, const std::string& topic) {
     std::string serialized_result;
-    if (!result.SerializeToString(&serialized_result)) {
-        LOG_ERROR() << "Failed to serialize RuleResult";
+    auto status = google::protobuf::util::MessageToJsonString(result, &serialized_result);
+    if (!status.ok()) {
+        LOG_ERROR() << "Failed to serialize RuleResult to JSON: " << status.message();
         return;
     }
 
