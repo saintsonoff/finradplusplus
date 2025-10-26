@@ -12,6 +12,9 @@ TransactionHistoryService::TransactionHistoryService(
 void TransactionHistoryService::SaveTransaction(
     const transaction::Transaction& tx) {
     try {
+        LOG_DEBUG() << "SaveTransaction: executing INSERT for transaction: " << tx.transaction_id()
+                    << " account: " << tx.sender_account();
+
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
             "INSERT INTO transactions "
@@ -35,7 +38,7 @@ void TransactionHistoryService::SaveTransaction(
             tx.device_hash()
         );
         
-        LOG_DEBUG() << "Saved transaction " << tx.transaction_id() 
+        LOG_INFO() << "Saved transaction " << tx.transaction_id() 
                    << " to PostgreSQL for account " << tx.sender_account();
     } catch (const std::exception& e) {
         LOG_ERROR() << "Failed to save transaction to PostgreSQL: " << e.what();
@@ -79,7 +82,7 @@ TransactionHistoryService::GetAccountHistory(
             history.push_back(std::move(tx));
         }
         
-        LOG_DEBUG() << "Retrieved " << history.size() 
+        LOG_INFO() << "Retrieved " << history.size() 
                    << " transactions for account " << account_id;
     } catch (const std::exception& e) {
         LOG_ERROR() << "Failed to get transaction history from PostgreSQL: " 
@@ -128,7 +131,7 @@ TransactionHistoryService::GetRecentTransactions(
             recent.push_back(std::move(tx));
         }
         
-        LOG_DEBUG() << "Retrieved " << recent.size() 
+        LOG_INFO() << "Retrieved " << recent.size() 
                    << " recent transactions (last " << minutes 
                    << " minutes) for account " << account_id;
     } catch (const std::exception& e) {
@@ -136,6 +139,48 @@ TransactionHistoryService::GetRecentTransactions(
                    << e.what();
     }
     return recent;
+}
+
+float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, const std::string& param) const {
+    try {
+        LOG_DEBUG() << "ExecuteAggregateQuery SQL: " << sql;
+        LOG_DEBUG() << "  param[1] = " << param;
+
+        auto result = pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, param);
+        if (result.IsEmpty()) {
+            LOG_DEBUG() << "ExecuteAggregateQuery: result set is empty";
+            return 0.0f;
+        }
+
+        // Если результат NULL (например, SUM/AVG/MIN/MAX по пустому набору), возвращаем 0.0f
+        if (result[0][0].IsNull()) {
+            LOG_DEBUG() << "ExecuteAggregateQuery: aggregate result is NULL (empty set), returning 0.0f";
+            return 0.0f;
+        }
+
+        // Для COUNT всегда int64, для SUM/AVG/… может быть double/float/int64
+        try {
+            int64_t ival = result[0][0].As<int64_t>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw int64 result = " << ival;
+            return static_cast<float>(ival);
+        } catch (...) {}
+        try {
+            double dval = result[0][0].As<double>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw double result = " << dval;
+            return static_cast<float>(dval);
+        } catch (...) {}
+        try {
+            float fval = result[0][0].As<float>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw float result = " << fval;
+            return fval;
+        } catch (...) {}
+
+        LOG_DEBUG() << "ExecuteAggregateQuery: unknown type for aggregate column, returning 0.0f";
+        return 0.0f;
+    } catch (const std::exception& e) {
+        LOG_ERROR() << "Failed to execute aggregate SQL: " << e.what();
+        return 0.0f;
+    }
 }
 
 // Enum conversion helpers

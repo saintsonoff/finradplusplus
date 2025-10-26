@@ -22,6 +22,8 @@ public:
         int minutes,
         int limit = 100) const;
 
+        // Execute an aggregate SQL query with a single parameter (commonly sender_account).
+        float ExecuteAggregateQuery(const std::string& sql, const std::string& param) const;
 private:
     std::string TransactionTypeToString(transaction::Transaction::TransactionType type) const;
     std::string DeviceUsedToString(transaction::Transaction::DeviceUsed device) const;

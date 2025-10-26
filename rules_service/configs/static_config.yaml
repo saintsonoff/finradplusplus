@@ -5,9 +5,11 @@ components_manager:
             fs-task-processor: fs-task-processor
             loggers:
                 default:
-                    file_path: '@stdout'
-                    level: info
+                    file_path: '@stderr'
+                    level: warning
                     overflow_behavior: discard
+                    format: raw
+
 
         dns-client:
             fs-task-processor: fs-task-processor
