@@ -39,7 +39,11 @@ services:
       command: >
         bash -c "
           cub kafka-ready -b kafka:29092 1 20 &&
-          kafka-topics --create --if-not-exists --topic my-first-topic \
+          kafka-topics --create --if-not-exists --topic Request \
+          --bootstrap-server kafka:29092 \
+          --partitions 1 \
+          --replication-factor 1 &&
+          kafka-topics --create --if-not-exists --topic Response \
           --bootstrap-server kafka:29092 \
           --partitions 1 \
           --replication-factor 1
@@ -58,6 +62,20 @@ services:
     networks:
       - app-network
 
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
   director-service:
     build:
       context: .
@@ -72,7 +90,7 @@ services:
       - GRPC_PORT=8030
       - HTTP_PORT=8092
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - KAFKA_TOPIC=my-first-topic
+      - KAFKA_TOPIC=Request
       - LOG_LEVEL=info
       - LOG_FORMAT=tskv
     depends_on:
@@ -112,6 +130,71 @@ services:
     depends_on:
       - director-service
 
+  rules-service:
+    build:
+      context: .
+      dockerfile: rules_service/Dockerfile
+    container_name: rules-service
+    networks:
+      - app-network
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - LOG_LEVEL=info
+      - LOG_FORMAT=tskv
+    depends_on:
+      - kafka
+      - kafka-topic-creator
+      - postgres
+      - director-service
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    networks:
+      - app-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres-data:
+  loki-data:
+  grafana-data:

@@ -37,7 +37,7 @@ components_manager:
         director-producer:
             task-processor: director-producer-task-processor
             topic: $KAFKA_TOPIC
-            topic#fallback: "my-first-topic"
+            topic#fallback: "Request"
 
         grpc-server:
             port: $GRPC_PORT

@@ -8,6 +8,7 @@ COPY ./shared_data_model /shared_data_model
 
 RUN . ./.env && \
     cmake -S ./src -B ./build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build ./build
+    cmake --build ./build && \
+    sed -i 's/KAFKA_TOPIC=my-first-topic/KAFKA_TOPIC=Request/' .env
 
-CMD ["/bin/bash", "-c", ". ./.env && ./build/bin/director_service --config ./configs/static_config.yaml"]
+CMD ["./build/bin/director_service", "--config", "./configs/static_config.yaml"]
