@@ -3,7 +3,7 @@ find_package(
     COMPONENTS grpc
     REQUIRED
 )
-set(PROTO_FILE_PATH "${DATA_MODELS_PATH}")
+set(PROTO_FILE_PATH "${DATA_PROTO_MODELS_PATH}")
 
 userver_add_grpc_library(transaction-proto PROTOS "${PROTO_FILE_PATH}/transaction/transaction.proto" SOURCE_PATH "${PROTO_FILE_PATH}")
 
