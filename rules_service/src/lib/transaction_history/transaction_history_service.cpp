@@ -1,30 +1,44 @@
 #include "transaction_history_service.hpp"
 
 #include <userver/logging/log.hpp>
-#include <userver/storages/redis/command_control.hpp>
+#include <userver/storages/postgres/component.hpp>
 
 namespace fraud_detection {
 
 TransactionHistoryService::TransactionHistoryService(
-    userver::storages::redis::ClientPtr redis_client)
-    : redis_client_(std::move(redis_client)) {}
+    userver::storages::postgres::ClusterPtr pg_cluster)
+    : pg_cluster_(std::move(pg_cluster)) {}
 
 void TransactionHistoryService::SaveTransaction(
     const transaction::Transaction& tx) {
     try {
-        std::string key = MakeAccountKey(tx.sender_account());
-        std::string serialized;
-        if (!tx.SerializeToString(&serialized)) {
-            LOG_ERROR() << "Failed to serialize transaction " << tx.transaction_id();
-            return;
-        }
-        double score = std::stod(tx.timestamp());
-        redis_client_->Zadd(key, score, serialized, {}).Get();
-        redis_client_->Expire(key, kTransactionTTL, {}).Get();
+        auto result = pg_cluster_->Execute(
+            userver::storages::postgres::ClusterHostType::kMaster,
+            "INSERT INTO transactions "
+            "(transaction_id, sender_account, times_tamp, receiver_account, amount, "
+            "transaction_type, merchant_category, location, device_used, payment_channel, "
+            "ip_address, device_hash) "
+            "VALUES ($1, $2, to_timestamp($3), $4, $5, $6::transaction_type, $7, $8, "
+            "$9::device_used, $10::payment_channel, $11, $12) "
+            "ON CONFLICT (transaction_id) DO NOTHING",
+            tx.transaction_id(),
+            tx.sender_account(),
+            std::stoll(tx.timestamp()),
+            tx.receiver_account(),
+            tx.amount(),
+            TransactionTypeToString(tx.transaction_type()),
+            tx.merchant_category(),
+            tx.location(),
+            DeviceUsedToString(tx.device_used()),
+            PaymentChannelToString(tx.payment_channel()),
+            tx.ip_address(),
+            tx.device_hash()
+        );
+        
         LOG_DEBUG() << "Saved transaction " << tx.transaction_id() 
-                   << " to Redis history for account " << tx.sender_account();
+                   << " to PostgreSQL for account " << tx.sender_account();
     } catch (const std::exception& e) {
-        LOG_ERROR() << "Failed to save transaction to Redis: " << e.what();
+        LOG_ERROR() << "Failed to save transaction to PostgreSQL: " << e.what();
     }
 }
 
@@ -34,28 +48,41 @@ TransactionHistoryService::GetAccountHistory(
     int limit) const {
     std::vector<transaction::Transaction> history;
     try {
-        std::string key = MakeAccountKey(account_id);
-        auto request = redis_client_->Zrangebyscore(key, "-inf", "+inf", {});
-        auto result = request.Get();
-        if (result.empty()) {
-            return history;
-        }
-        const auto& all_txs = result;
-        size_t start_idx = all_txs.size() > static_cast<size_t>(limit) ? 
-                           all_txs.size() - limit : 0;
-        for (size_t i = all_txs.size(); i > start_idx; --i) {
-            const auto& serialized = all_txs[i - 1];
+        auto result = pg_cluster_->Execute(
+            userver::storages::postgres::ClusterHostType::kSlave,
+            "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
+            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "device_used::text, payment_channel::text, ip_address, device_hash "
+            "FROM transactions "
+            "WHERE sender_account = $1 "
+            "ORDER BY times_tamp DESC "
+            "LIMIT $2",
+            account_id,
+            limit
+        );
+        
+        for (const auto& row : result) {
             transaction::Transaction tx;
-            if (tx.ParseFromString(serialized)) {
-                history.push_back(std::move(tx));
-            } else {
-                LOG_WARNING() << "Failed to deserialize transaction from Redis";
-            }
+            tx.set_transaction_id(row["transaction_id"].As<std::string>());
+            tx.set_sender_account(row["sender_account"].As<std::string>());
+            tx.set_timestamp(std::to_string(row["timestamp"].As<int64_t>()));
+            tx.set_receiver_account(row["receiver_account"].As<std::string>());
+            tx.set_amount(row["amount"].As<double>());
+            tx.set_transaction_type(StringToTransactionType(row["transaction_type"].As<std::string>()));
+            tx.set_merchant_category(row["merchant_category"].As<std::string>());
+            tx.set_location(row["location"].As<std::string>());
+            tx.set_device_used(StringToDeviceUsed(row["device_used"].As<std::string>()));
+            tx.set_payment_channel(StringToPaymentChannel(row["payment_channel"].As<std::string>()));
+            tx.set_ip_address(row["ip_address"].As<std::string>());
+            tx.set_device_hash(row["device_hash"].As<std::string>());
+            
+            history.push_back(std::move(tx));
         }
+        
         LOG_DEBUG() << "Retrieved " << history.size() 
                    << " transactions for account " << account_id;
     } catch (const std::exception& e) {
-        LOG_ERROR() << "Failed to get transaction history from Redis: " 
+        LOG_ERROR() << "Failed to get transaction history from PostgreSQL: " 
                    << e.what();
     }
     return history;
@@ -68,44 +95,108 @@ TransactionHistoryService::GetRecentTransactions(
     int limit) const {
     std::vector<transaction::Transaction> recent;
     try {
-        std::string key = MakeAccountKey(account_id);
-        auto now = std::chrono::system_clock::now();
-        auto cutoff = now - std::chrono::minutes(minutes);
-        auto cutoff_timestamp = std::chrono::duration_cast<
-            std::chrono::seconds>(cutoff.time_since_epoch()).count();
-        auto request = redis_client_->Zrangebyscore(
-            key,
-            std::to_string(cutoff_timestamp),
-            "+inf",
-            {}
+        auto result = pg_cluster_->Execute(
+            userver::storages::postgres::ClusterHostType::kSlave,
+            "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
+            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "device_used::text, payment_channel::text, ip_address, device_hash "
+            "FROM transactions "
+            "WHERE sender_account = $1 "
+            "AND times_tamp >= NOW() - INTERVAL '1 minute' * $2 "
+            "ORDER BY times_tamp DESC "
+            "LIMIT $3",
+            account_id,
+            minutes,
+            limit
         );
-        auto result = request.Get();
-        if (result.empty()) {
-            return recent;
-        }
-        const auto& all_txs = result;
-        size_t start_idx = all_txs.size() > static_cast<size_t>(limit) ? 
-                           all_txs.size() - limit : 0;
-        for (size_t i = all_txs.size(); i > start_idx; --i) {
-            const auto& serialized = all_txs[i - 1];
+        
+        for (const auto& row : result) {
             transaction::Transaction tx;
-            if (tx.ParseFromString(serialized)) {
-                recent.push_back(std::move(tx));
-            }
+            tx.set_transaction_id(row["transaction_id"].As<std::string>());
+            tx.set_sender_account(row["sender_account"].As<std::string>());
+            tx.set_timestamp(std::to_string(row["timestamp"].As<int64_t>()));
+            tx.set_receiver_account(row["receiver_account"].As<std::string>());
+            tx.set_amount(row["amount"].As<double>());
+            tx.set_transaction_type(StringToTransactionType(row["transaction_type"].As<std::string>()));
+            tx.set_merchant_category(row["merchant_category"].As<std::string>());
+            tx.set_location(row["location"].As<std::string>());
+            tx.set_device_used(StringToDeviceUsed(row["device_used"].As<std::string>()));
+            tx.set_payment_channel(StringToPaymentChannel(row["payment_channel"].As<std::string>()));
+            tx.set_ip_address(row["ip_address"].As<std::string>());
+            tx.set_device_hash(row["device_hash"].As<std::string>());
+            
+            recent.push_back(std::move(tx));
         }
+        
         LOG_DEBUG() << "Retrieved " << recent.size() 
                    << " recent transactions (last " << minutes 
                    << " minutes) for account " << account_id;
     } catch (const std::exception& e) {
-        LOG_ERROR() << "Failed to get recent transactions from Redis: " 
+        LOG_ERROR() << "Failed to get recent transactions from PostgreSQL: " 
                    << e.what();
     }
     return recent;
 }
 
-std::string TransactionHistoryService::MakeAccountKey(
-    const std::string& account_id) const {
-    return "tx_history:" + account_id;
+// Enum conversion helpers
+std::string TransactionHistoryService::TransactionTypeToString(
+    transaction::Transaction::TransactionType type) const {
+    switch (type) {
+        case transaction::Transaction::WITHDRAWAL: return "WITHDRAWAL";
+        case transaction::Transaction::DEPOSIT: return "DEPOSIT";
+        case transaction::Transaction::TRANSFER: return "TRANSFER";
+        case transaction::Transaction::PAYMENT: return "PAYMENT";
+        default: return "PAYMENT";
+    }
+}
+
+std::string TransactionHistoryService::DeviceUsedToString(
+    transaction::Transaction::DeviceUsed device) const {
+    switch (device) {
+        case transaction::Transaction::MOBILE: return "MOBILE";
+        case transaction::Transaction::ATM: return "ATM";
+        case transaction::Transaction::POS: return "POS";
+        case transaction::Transaction::WEB: return "WEB";
+        default: return "WEB";
+    }
+}
+
+std::string TransactionHistoryService::PaymentChannelToString(
+    transaction::Transaction::PaymentChannel channel) const {
+    switch (channel) {
+        case transaction::Transaction::UPI: return "UPI";
+        case transaction::Transaction::CARD: return "CARD";
+        case transaction::Transaction::ACH: return "ACH";
+        case transaction::Transaction::WIRE_TRANSFER: return "WIRE_TRANSFER";
+        default: return "CARD";
+    }
+}
+
+transaction::Transaction::TransactionType TransactionHistoryService::StringToTransactionType(
+    const std::string& str) const {
+    if (str == "WITHDRAWAL") return transaction::Transaction::WITHDRAWAL;
+    if (str == "DEPOSIT") return transaction::Transaction::DEPOSIT;
+    if (str == "TRANSFER") return transaction::Transaction::TRANSFER;
+    if (str == "PAYMENT") return transaction::Transaction::PAYMENT;
+    return transaction::Transaction::PAYMENT;
+}
+
+transaction::Transaction::DeviceUsed TransactionHistoryService::StringToDeviceUsed(
+    const std::string& str) const {
+    if (str == "MOBILE") return transaction::Transaction::MOBILE;
+    if (str == "ATM") return transaction::Transaction::ATM;
+    if (str == "POS") return transaction::Transaction::POS;
+    if (str == "WEB") return transaction::Transaction::WEB;
+    return transaction::Transaction::WEB;
+}
+
+transaction::Transaction::PaymentChannel TransactionHistoryService::StringToPaymentChannel(
+    const std::string& str) const {
+    if (str == "UPI") return transaction::Transaction::UPI;
+    if (str == "CARD") return transaction::Transaction::CARD;
+    if (str == "ACH") return transaction::Transaction::ACH;
+    if (str == "WIRE_TRANSFER") return transaction::Transaction::WIRE_TRANSFER;
+    return transaction::Transaction::CARD;
 }
 
 }  // namespace fraud_detection

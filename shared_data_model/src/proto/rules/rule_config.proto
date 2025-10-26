@@ -14,7 +14,6 @@ message Expression {
         
         LogicalOperation logical = 5;
         
-        ArithmeticOperation arithmetic = 6;
     }
 }
 
@@ -69,8 +68,6 @@ message ComparisonOperation {
         GREATER_THAN_OR_EQUAL = 3;
         LESS_THAN = 4;
         LESS_THAN_OR_EQUAL = 5;
-        LIKE = 6;
-        IN = 7;
     }
     
     Operator operator = 1;
@@ -87,20 +84,6 @@ message LogicalOperation {
     
     Operator operator = 1;
     repeated Expression operands = 2;
-}
-
-message ArithmeticOperation {
-    enum Operator {
-        ADD = 0;
-        SUBTRACT = 1;
-        MULTIPLY = 2;
-        DIVIDE = 3;
-        MODULO = 4;
-    }
-    
-    Operator operator = 1;
-    Expression left = 2;
-    Expression right = 3;
 }
 
 

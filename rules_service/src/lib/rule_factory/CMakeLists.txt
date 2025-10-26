@@ -10,4 +10,5 @@ target_link_libraries(rule_factory PUBLIC
     ml_rule
     pattern_rule
     transaction_history
+    ml_model
 )

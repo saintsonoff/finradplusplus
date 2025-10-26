@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package rules;
 
-message RuleReult {
+message RuleResult {
     enum Status {
         ERROR = 0;
         NOT_FRAUD = 1;
@@ -10,7 +10,9 @@ message RuleReult {
     }
     string profile_uuid = 1;
     string profile_name = 2;
-    string config_uiid = 3;
+    string config_uuid = 3;
     string config_name = 4;
     Status status = 5;
-};
+    string transaction_id = 6;
+    string description = 7;
+}

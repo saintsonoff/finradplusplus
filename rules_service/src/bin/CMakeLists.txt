@@ -2,7 +2,7 @@ add_executable(rules_service main.cpp)
 
 target_link_libraries(rules_service PUBLIC
     userver::kafka
-    userver::redis
+    userver::postgresql
     userver::core
     transaction-proto
     rule-config-proto
