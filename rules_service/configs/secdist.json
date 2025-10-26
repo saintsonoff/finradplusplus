@@ -4,11 +4,7 @@
             "postgres-db-1": [
                 {
                     "shard_number": 0,
-                    "host": "localhost",
-                    "port": 5432,
-                    "dbname": "it_cup_onecode",
-                    "user": "postgres",
-                    "password": "postgres"
+                    "hosts": ["host=localhost port=5432 dbname=it_cup_onecode user=postgres password=postgres"]
                 }
             ]
         }

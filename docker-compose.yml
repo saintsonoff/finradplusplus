@@ -111,7 +111,7 @@ services:
       - DIRECTOR_GRPC_ADDRESS=director-service:8030
       - ALLOWED_HOSTS=localhost,127.0.0.1,admin-panel
     volumes:
-      - ./AdminPanel/db.sqlite3:/app/db.sqlite3
+      - admin-panel-db:/app/db-data
       - ./AdminPanel/staticfiles:/app/staticfiles
     depends_on:
       - director-service
@@ -198,3 +198,4 @@ volumes:
   postgres-data:
   loki-data:
   grafana-data:
+  admin-panel-db:

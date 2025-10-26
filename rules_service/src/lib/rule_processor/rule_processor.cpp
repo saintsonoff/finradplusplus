@@ -121,9 +121,18 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
                      << " (threshold: " << threshold << ")";
                 result.set_description(desc.str());
                 if (is_fraud) {
-                    result.set_status(rules::RuleResult::FRAUD);
-                    LOG_WARNING() << "FRAUD detected for transaction: " << request.transaction().transaction_id()
-                                 << " by ML rule with probability: " << fraud_probability;
+                    // Check if rule is critical
+                    bool is_critical = request.rule().is_critical();
+                    if (is_critical) {
+                        result.set_status(rules::RuleResult::CRITICAL);
+                        LOG_ERROR() << "CRITICAL FRAUD detected for transaction: " << request.transaction().transaction_id()
+                                   << " by ML rule with probability: " << fraud_probability 
+                                   << " (is_critical=true)";
+                    } else {
+                        result.set_status(rules::RuleResult::FRAUD);
+                        LOG_WARNING() << "FRAUD detected for transaction: " << request.transaction().transaction_id()
+                                     << " by ML rule with probability: " << fraud_probability;
+                    }
                 } else {
                     result.set_status(rules::RuleResult::NOT_FRAUD);
                     LOG_INFO() << "Transaction " << request.transaction().transaction_id() 
@@ -145,9 +154,17 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
             result.set_description(description);
             
             if (is_fraud) {
-                result.set_status(rules::RuleResult::FRAUD);
-                LOG_WARNING() << "FRAUD detected for transaction: " << request.transaction().transaction_id()
-                             << " by rule: " << request.rule().uuid();
+                // Check if rule is critical
+                bool is_critical = request.rule().is_critical();
+                if (is_critical) {
+                    result.set_status(rules::RuleResult::CRITICAL);
+                    LOG_ERROR() << "CRITICAL FRAUD detected for transaction: " << request.transaction().transaction_id()
+                               << " by rule: " << request.rule().uuid() << " (is_critical=true)";
+                } else {
+                    result.set_status(rules::RuleResult::FRAUD);
+                    LOG_WARNING() << "FRAUD detected for transaction: " << request.transaction().transaction_id()
+                                 << " by rule: " << request.rule().uuid();
+                }
             } else {
                 result.set_status(rules::RuleResult::NOT_FRAUD);
                 LOG_INFO() << "Transaction " << request.transaction().transaction_id() 

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Ensure database directory exists
+echo "Checking database directory..."
+mkdir -p db-data
+
 # Wait for database to be ready (if using external DB)
 echo "Waiting for database..."
 

@@ -7,6 +7,7 @@ message RuleResult {
         ERROR = 0;
         NOT_FRAUD = 1;
         FRAUD = 2;
+        CRITICAL = 3;
     }
     string profile_uuid = 1;
     string profile_name = 2;
