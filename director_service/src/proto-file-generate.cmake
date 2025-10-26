@@ -1,7 +1,8 @@
 find_package(
     userver 
-    COMPONENTS grpc
-    REQUIRED
+COMPONENTS 
+    grpc
+REQUIRED
 )
 set(PROTO_FILE_PATH "${DATA_PROTO_MODELS_PATH}")
 
