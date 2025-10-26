@@ -1,0 +1,18 @@
+find_package(
+    userver
+COMPONENTS
+    grpc
+REQUIRED
+)
+
+add_executable(director_service main.cpp)
+
+target_link_libraries(
+    director_service
+PUBLIC
+    userver::grpc
+PUBLIC
+    profile_receiver
+    transaction_receiver
+    director
+)

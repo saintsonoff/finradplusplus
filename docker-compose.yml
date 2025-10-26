@@ -1,0 +1,223 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    networks:
+      - app-network
+    environment:
+      KAFKA_NODE_ID: 1
+
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+
+      KAFKA_LISTENERS: 'CONTROLLER://:9093,PLAINTEXT://:29092,PLAINTEXT_HOST://0.0.0.0:9092'
+
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+  kafka-topic-creator:
+      image: confluentinc/cp-kafka:latest
+      depends_on:
+        - kafka
+      networks:
+        - app-network
+
+      command: >
+        bash -c "
+          cub kafka-ready -b kafka:29092 1 20 &&
+          kafka-topics --create --if-not-exists --topic Request \
+          --bootstrap-server kafka:29092 \
+          --partitions 1 \
+          --replication-factor 1 &&
+          kafka-topics --create --if-not-exists --topic Response \
+          --bootstrap-server kafka:29092 \
+          --partitions 1 \
+          --replication-factor 1
+        "
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "18090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./shared_data_model/src/migrations:/docker-entrypoint-initdb.d
+
+  director-service:
+    build:
+      context: .
+      dockerfile: director_service/Dockerfile
+    container_name: director-service
+    ports:
+      - "8030:8030"
+      - "8092:8092"
+    networks:
+      - app-network
+    depends_on:
+      - kafka
+      - kafka-topic-creator
+
+  admin-panel:
+    build:
+      context: .
+      dockerfile: AdminPanel/Dockerfile
+    container_name: admin-panel
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    environment:
+      - DEBUG=False
+      - DIRECTOR_GRPC_ADDRESS=director-service:8030
+      - ALLOWED_HOSTS=localhost,127.0.0.1,admin-panel
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    volumes:
+      - admin-static:/app/staticfiles
+    depends_on:
+      - postgres
+      - director-service
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ApiGateWay/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    environment:
+      - GRPC_SERVICE_ADDRESS=director-service:8030
+    depends_on:
+      - director-service
+
+  rules-service:
+    build:
+      context: .
+      dockerfile: rules_service/Dockerfile
+    container_name: rules-service
+    volumes:
+      - ./rules_service/model_configs:/rules_service/model_configs
+    networks:
+      - app-network
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - LOG_LEVEL=info
+      - LOG_FORMAT=tskv
+    depends_on:
+      - kafka
+      - kafka-topic-creator
+      - postgres
+      - director-service
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    networks:
+      - app-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=u6953671007@gmail.com
+      - GF_SMTP_PASSWORD=lsoipiuaghdlklzi
+      - GF_SMTP_FROM_ADDRESS=u6953671007@gmail.com
+      - GF_SMTP_FROM_NAME=Grafana Fraud Detection Alerts
+      - GF_SMTP_SKIP_VERIFY=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
+      - postgres
+
+  webhook-service:
+    build:
+      context: ./webhook_service
+      dockerfile: Dockerfile
+    container_name: webhook-service
+    ports:
+      - "8888:8888"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  loki-data:
+  grafana-data:
+  admin-static:

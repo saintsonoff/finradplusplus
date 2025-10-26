@@ -1,0 +1,3 @@
+add_subdirectory(director_producer)
+add_subdirectory(profile_receiver)
+add_subdirectory(transaction_receiver)

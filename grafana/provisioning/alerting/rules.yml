@@ -1,0 +1,117 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: fraud_alerts
+    folder: Fraud Detection
+    interval: 1m
+    rules:
+      - uid: fraud_detected
+        title: FRAUD Transaction Detected
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: postgres
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              rawSql: "SELECT COUNT(*) as value FROM rule_results WHERE status = 'FRAUD' AND created_at > NOW() - INTERVAL '2 minutes'"
+              refId: A
+              format: table
+
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+              
+        noDataState: NoData
+        execErrState: Alerting
+        for: 30s
+        annotations:
+          summary: FRAUD transaction detected in rule_results table
+          description: Found FRAUD status in rule_results. Check PostgreSQL table for transaction details.
+        labels:
+          severity: critical
+          type: fraud
+
+  - orgId: 1
+    name: service_alerts  
+    folder: Service Health
+    interval: 1m
+    rules:
+      - uid: service_errors
+        title: Service Errors in Logs
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({container=~"director-service|rules-service"} |~ "(?i)error|critical|fatal" [1m])'
+              refId: A
+              
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+              
+        noDataState: NoData
+        execErrState: Error
+        for: 30s
+        annotations:
+          summary: High error rate in service logs
+          description: Found errors in director-service or rules-service logs
+        labels:
+          severity: warning
+          type: service_health
