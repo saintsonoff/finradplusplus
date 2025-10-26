@@ -117,7 +117,7 @@ bool MLFraudDetector::LoadModelByUuid(const std::string& config_dir, const std::
     }
 #endif
 
-    std::string xgb_path = config_dir + "/" + uuid + ".xgb";
+    std::string xgb_path = config_dir + "/" + uuid + "_json.json";
     std::ifstream xgb_check(xgb_path);
     if (!xgb_check.good()) {
         LOG_ERROR() << "XGBoost model file not found: " << xgb_path;

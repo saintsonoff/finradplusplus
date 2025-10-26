@@ -54,7 +54,7 @@ TransactionHistoryService::GetAccountHistory(
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
             "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
-            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "receiver_account, amount::double precision as amount, transaction_type::text, merchant_category, location, "
             "device_used::text, payment_channel::text, ip_address, device_hash "
             "FROM transactions "
             "WHERE sender_account = $1 "
@@ -101,7 +101,7 @@ TransactionHistoryService::GetRecentTransactions(
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
             "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
-            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "receiver_account, amount::double precision as amount, transaction_type::text, merchant_category, location, "
             "device_used::text, payment_channel::text, ip_address, device_hash "
             "FROM transactions "
             "WHERE sender_account = $1 "
