@@ -104,10 +104,15 @@ services:
       - DEBUG=False
       - DIRECTOR_GRPC_ADDRESS=director-service:8030
       - ALLOWED_HOSTS=localhost,127.0.0.1,admin-panel
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     volumes:
-      - admin-db:/app
       - admin-static:/app/staticfiles
     depends_on:
+      - postgres
       - director-service
 
   api-gateway:
@@ -129,6 +134,8 @@ services:
       context: .
       dockerfile: rules_service/Dockerfile
     container_name: rules-service
+    volumes:
+      - ./rules_service/model_configs:/rules_service/model_configs
     networks:
       - app-network
     environment:
@@ -179,10 +186,31 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=u6953671007@gmail.com
+      - GF_SMTP_PASSWORD=lsoipiuaghdlklzi
+      - GF_SMTP_FROM_ADDRESS=u6953671007@gmail.com
+      - GF_SMTP_FROM_NAME=Grafana Fraud Detection Alerts
+      - GF_SMTP_SKIP_VERIFY=true
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - loki
+      - postgres
+
+  webhook-service:
+    build:
+      context: ./webhook_service
+      dockerfile: Dockerfile
+    container_name: webhook-service
+    ports:
+      - "8888:8888"
+    networks:
+      - app-network
+    restart: unless-stopped
 
 networks:
   app-network:
@@ -192,5 +220,3 @@ volumes:
   postgres-data:
   loki-data:
   grafana-data:
-  admin-db:
-  admin-static:
