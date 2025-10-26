@@ -1,3 +1,4 @@
+#!/bin/bash
 
 echo "Waiting for database..."
 

@@ -55,7 +55,7 @@ components_manager:
                 bootstrap.servers: kafka:29092
 
         rule-processor:
-            ml_model_config_dir: /workspaces/repozitorij-dlya-raboty-7408/rules_service/model_configs
+            ml_model_config_dir: ./model_configs
             response_topic: Response
 
     task_processors:

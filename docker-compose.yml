@@ -141,6 +141,8 @@ services:
       context: .
       dockerfile: rules_service/Dockerfile
     container_name: rules-service
+    volumes:
+      - ./rules_service/model_configs:/rules_service/model_configs
     networks:
       - app-network
     environment:
@@ -225,5 +227,3 @@ volumes:
   postgres-data:
   loki-data:
   grafana-data:
-  admin-db:
-  admin-static:
