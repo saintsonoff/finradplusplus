@@ -75,6 +75,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./shared_data_model/src/migrations:/docker-entrypoint-initdb.d
 
   director-service:
     build:
