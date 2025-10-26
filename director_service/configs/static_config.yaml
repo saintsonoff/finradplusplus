@@ -1,9 +1,11 @@
+config_vars: configs/config_vars.yaml
+
 components_manager:
     coro_pool:
-        initial_size: 500
-        max_size: 1000
-        stack_size: 262144
-        stack_usage_monitor_enabled: false
+        initial_size: $coro_pool_initial_size
+        max_size: $coro_pool_max_size
+        stack_size: $coro_pool_stack_size
+        stack_usage_monitor_enabled: $coro_pool_monitor_enabled
         
     components:
         logging:
@@ -11,11 +13,9 @@ components_manager:
             loggers:
                 default:
                     file_path: '@stderr'
-                    level: $LOG_LEVEL
-                    level#fallback: info
+                    level: $log_level
                     overflow_behavior: discard
-                    format: $LOG_FORMAT
-                    format#fallback: raw
+                    format: $log_format
 
         secdist:
             provider: default-secdist-provider
@@ -31,17 +31,14 @@ components_manager:
             security_protocol: PLAINTEXT
             operation_log_level: warning
             rd_kafka_custom_options:
-                bootstrap.servers: $KAFKA_BOOTSTRAP_SERVERS
-                bootstrap.servers#fallback: kafka:29092
+                bootstrap.servers: $kafka_bootstrap_servers
 
         director-producer:
             task-processor: director-producer-task-processor
-            topic: $KAFKA_TOPIC
-            topic#fallback: "Request"
+            topic: $kafka_topic
 
         grpc-server:
-            port: $GRPC_PORT
-            port#fallback: 8030
+            port: $grpc_port
 
         grpc-server-middlewares-pipeline:
             middlewares: {}
@@ -56,32 +53,26 @@ components_manager:
 
         server:
             listener:
-                port: $HTTP_PORT
-                port#fallback: 8092
+                port: $http_port
                 task_processor: main-task-processor
 
     task_processors:
         fs-task-processor:
-            worker_threads: $FS_WORKER_THREADS
-            worker_threads#fallback: 2
+            worker_threads: $fs_workers
             thread_name: fs-worker
             
         grpc-blocking-task-processor:
-            worker_threads: $GRPC_WORKER_THREADS
-            worker_threads#fallback: 2
+            worker_threads: $grpc_workers
             thread_name: grpc-worker
 
         producer-task-processor:
-            worker_threads: $PRODUCER_WORKER_THREADS
-            worker_threads#fallback: 2
+            worker_threads: $producer_workers
             thread_name: producer
 
         main-task-processor:
-            worker_threads: $MAIN_WORKER_THREADS
-            worker_threads#fallback: 8
+            worker_threads: $main_workers
             thread_name: main-worker
 
         director-producer-task-processor:
-            worker_threads: $DIRECTOR_WORKER_THREADS
-            worker_threads#fallback: 8
+            worker_threads: $director_workers
             thread_name: director

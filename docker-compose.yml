@@ -87,13 +87,6 @@ services:
       - "8092:8092"
     networks:
       - app-network
-    environment:
-      - GRPC_PORT=8030
-      - HTTP_PORT=8092
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - KAFKA_TOPIC=Request
-      - LOG_LEVEL=info
-      - LOG_FORMAT=tskv
     depends_on:
       - kafka
       - kafka-topic-creator
@@ -111,10 +104,15 @@ services:
       - DEBUG=False
       - DIRECTOR_GRPC_ADDRESS=director-service:8030
       - ALLOWED_HOSTS=localhost,127.0.0.1,admin-panel
+      - POSTGRES_DB=it_cup_onecode
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     volumes:
-      - ./AdminPanel/db.sqlite3:/app/db.sqlite3
-      - ./AdminPanel/staticfiles:/app/staticfiles
+      - admin-static:/app/staticfiles
     depends_on:
+      - postgres
       - director-service
 
   api-gateway:
@@ -202,6 +200,17 @@ services:
     depends_on:
       - loki
       - postgres
+
+  webhook-service:
+    build:
+      context: ./webhook_service
+      dockerfile: Dockerfile
+    container_name: webhook-service
+    ports:
+      - "8888:8888"
+    networks:
+      - app-network
+    restart: unless-stopped
 
 networks:
   app-network:

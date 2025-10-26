@@ -6,8 +6,9 @@ COPY ./director_service/ .
 
 COPY ./shared_data_model /shared_data_model
 
-RUN . ./.env && \
-    cmake -S ./src -B ./build -DCMAKE_BUILD_TYPE=Release && \
+ENV DIRECTOR_SHARED_MODELS_PATH=/shared_data_model
+
+RUN cmake -S ./src -B ./build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build ./build
 
-CMD ["./build/bin/director_service", "--config", "./configs/static_config.yaml"]
+CMD ["./build/bin/director_service", "--config", "./configs/static_config.yaml", "--config_vars", "./configs/config_vars.yaml"]

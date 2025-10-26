@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django import forms
 
 from .models import (
-    Profile, RuleConfig, MLRule, ThresholdRule, CompositeRule, PatternRule
+    Profile, RuleConfig, MLRule, ThresholdRule, CompositeRule, PatternRule, RuleResult
 )
 from .grpc_client import send_profiles_to_director
 from .expression_parser import RuleParser
@@ -215,3 +215,19 @@ class RuleConfigAdmin(admin.ModelAdmin):
     list_display = ('name', 'profile', 'rule_type', 'is_critical', 'rule', 'uuid')
     readonly_fields = ('uuid',)
     list_filter = ('rule_type', 'is_critical', 'profile')
+
+@admin.register(RuleResult)
+class RuleResultAdmin(admin.ModelAdmin):
+    list_display = ('transaction_id', 'status', 'profile_name', 'config_name', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('transaction_id', 'profile_name', 'config_name', 'description')
+    readonly_fields = ('profile_uuid', 'profile_name', 'config_uuid', 'config_name', 'status', 'transaction_id', 'description', 'created_at')
+    ordering = ('-created_at',)
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    change_list_template = 'admin/rule_result_changelist.html'

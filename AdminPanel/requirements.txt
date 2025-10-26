@@ -4,4 +4,5 @@ grpcio==1.76.0
 grpcio-tools==1.76.0
 protobuf>=6.31.1
 gunicorn==21.2.0
-whitenoise==6.8.2
+psycopg2-binary==2.9.9
+whitenoise==6.6.0

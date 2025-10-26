@@ -40,7 +40,7 @@ contactPoints:
       - uid: webhook-receiver
         type: webhook
         settings:
-          url: http://host.docker.internal:8888/webhook/alerts
+          url: http://webhook-service:8888/webhook/alerts
           httpMethod: POST
           maxAlerts: 10
         disableResolveMessage: true
