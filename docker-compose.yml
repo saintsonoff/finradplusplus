@@ -188,10 +188,20 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=u6953671007@gmail.com
+      - GF_SMTP_PASSWORD=lsoipiuaghdlklzi
+      - GF_SMTP_FROM_ADDRESS=u6953671007@gmail.com
+      - GF_SMTP_FROM_NAME=Grafana Fraud Detection Alerts
+      - GF_SMTP_SKIP_VERIFY=true
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - loki
+      - postgres
 
 networks:
   app-network:
