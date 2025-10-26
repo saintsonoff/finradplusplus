@@ -10,7 +10,6 @@ namespace fraud_detection {
 
 class MlRuleAnalyzer : public IRule {
 public:
-    // Конструктор для использования с ML детектором
     MlRuleAnalyzer(const rules::RuleConfig& rule_config,
                    std::shared_ptr<MLFraudDetector> ml_detector,
                    std::shared_ptr<TransactionHistoryProvider> history_provider);
@@ -21,7 +20,7 @@ private:
     const rules::RuleConfig rule_config_;
     std::shared_ptr<MLFraudDetector> ml_detector_;
     std::shared_ptr<TransactionHistoryProvider> history_provider_;
-    double threshold_;  // Порог вероятности из конфигурации
+    double threshold_;
 };
 
-}
+} // namespace fraud_detection

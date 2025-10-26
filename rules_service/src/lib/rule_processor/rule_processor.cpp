@@ -30,7 +30,6 @@ RuleProcessor::RuleProcessor(
         history_provider_ = nullptr;
     }
 
-    // Инициализация ML детектора
     ml_detector_ = std::make_shared<MLFraudDetector>();
     model_config_dir_ = config["ml_model_config_dir"].As<std::string>(
         "/workspaces/repozitorij-dlya-raboty-7408/rules_service/model_configs");
@@ -98,7 +97,6 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
                        << " to PostgreSQL history";
         }
         
-        // Если это ML правило и есть ML детектор, пробуем загрузить модель по uuid
         if (request.rule().rule_type() == rules::RuleConfig::ML && ml_detector_ && history_provider_) {
             std::string uuid = request.rule().uuid();
             if (!ml_detector_->LoadModelByUuid(model_config_dir_, uuid)) {
@@ -124,11 +122,9 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
                 }
             }
         } else {
-            // Для всех остальных правил используем обычный метод
             auto rule = RuleFactory::CreateRuleByType(request.rule(), history_service_, ml_detector_);
             bool is_fraud = rule->IsFraudTransaction(request.transaction());
             
-            // Формируем описание ПОСЛЕ проверки правила
             std::string description;
             if (request.rule().rule_type() == rules::RuleConfig::THRESHOLD) {
                 description = "Threshold rule applied, amount: " + std::to_string(request.transaction().amount());

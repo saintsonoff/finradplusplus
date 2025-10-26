@@ -1,6 +1,5 @@
 project(ml_model CXX)
 
-# Найти библиотеки XGBoost и LightGBM
 find_library(XGBOOST_LIB NAMES xgboost libxgboost PATHS /usr/local/lib /usr/lib /opt/homebrew/lib)
 find_library(LIGHTGBM_LIB NAMES _lightgbm lib_lightgbm lightgbm PATHS 
     /usr/local/lib 
@@ -17,7 +16,6 @@ if(NOT LIGHTGBM_LIB)
     message(WARNING "LightGBM library not found. Stage 1 model will be disabled. Install with: pip3 install lightgbm")
 endif()
 
-# Найти заголовочные файлы
 find_path(XGBOOST_INCLUDE NAMES xgboost/c_api.h PATHS /usr/local/include /usr/include /opt/homebrew/include)
 find_path(LIGHTGBM_INCLUDE NAMES LightGBM/c_api.h PATHS 
     /usr/local/include 

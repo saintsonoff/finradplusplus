@@ -5,7 +5,6 @@
 
 namespace fraud_detection {
 
-// Адаптер для получения истории транзакций из Redis через TransactionHistoryService
 class RedisHistoryProvider : public TransactionHistoryProvider {
 public:
     explicit RedisHistoryProvider(std::shared_ptr<TransactionHistoryService> history_service)

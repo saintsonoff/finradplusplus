@@ -10,9 +10,8 @@ MlRuleAnalyzer::MlRuleAnalyzer(const rules::RuleConfig& rule_config,
     : rule_config_(rule_config)
     , ml_detector_(std::move(ml_detector))
     , history_provider_(std::move(history_provider))
-    , threshold_(0.5) {  // Порог по умолчанию
+    , threshold_(0.5) {
     
-    // Извлечь порог из конфигурации ML правила
     if (rule_config_.has_ml_rule()) {
         threshold_ = rule_config_.ml_rule().lower_bound();
         LOG_INFO() << "ML Rule threshold (lower_bound) set to: " << threshold_;
@@ -22,7 +21,7 @@ MlRuleAnalyzer::MlRuleAnalyzer(const rules::RuleConfig& rule_config,
 bool MlRuleAnalyzer::IsFraudTransaction(const transaction::Transaction& transaction) const {
     if (!ml_detector_) {
         LOG_ERROR() << "ML detector not initialized";
-        return false;  // Консервативный подход: не блокировать если модель не загружена
+        return false;
     }
     
     if (!ml_detector_->IsLoaded()) {
@@ -36,10 +35,8 @@ bool MlRuleAnalyzer::IsFraudTransaction(const transaction::Transaction& transact
     }
     
     try {
-        // Получить вероятность мошенничества от модели
         double fraud_probability = ml_detector_->PredictFraudProbability(transaction, *history_provider_);
         
-        // Сравнить с порогом
         bool is_fraud = fraud_probability >= threshold_;
         
         LOG_INFO() << "Transaction " << transaction.transaction_id() 
@@ -51,7 +48,7 @@ bool MlRuleAnalyzer::IsFraudTransaction(const transaction::Transaction& transact
         
     } catch (const std::exception& ex) {
         LOG_ERROR() << "ML prediction failed: " << ex.what();
-        return false;  // Консервативный подход при ошибке
+        return false;
     }
 }
 

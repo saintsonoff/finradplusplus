@@ -54,7 +54,6 @@ RuleFactory::GetCreators() {
             if (!history_service) {
                 throw std::invalid_argument("ML rule requires TransactionHistoryService for feature extraction");
             }
-            // Создать history provider для ML детектора
             auto history_provider = std::make_shared<RedisHistoryProvider>(history_service);
             return std::make_unique<MlRuleAnalyzer>(config, ml_detector, history_provider);
         }},

@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <stdexcept>
 
-// LightGBM опциональный - только если найден заголовок
 #ifdef HAVE_LIGHTGBM
 #include <LightGBM/c_api.h>
 #endif
@@ -42,7 +41,6 @@ std::time_t ParseIsoToEpochSeconds(const std::string& iso) {
         return timegm(&tm);
 #endif
     }
-    // Fallback: попробовать как unix timestamp
     try {
         return static_cast<std::time_t>(std::stoll(iso));
     } catch (...) {
@@ -68,7 +66,6 @@ MLFraudDetector::~MLFraudDetector() {
 
 bool MLFraudDetector::LoadModelByUuid(const std::string& config_dir, const std::string& uuid) {
     config_dir_ = config_dir;
-    // Очистить старые данные
     feature_names_.clear();
     feature_index_map_.clear();
     if (xgb_model_) {
@@ -82,7 +79,6 @@ bool MLFraudDetector::LoadModelByUuid(const std::string& config_dir, const std::
     }
 #endif
 
-    // Загрузить список признаков
     std::string columns_path = config_dir + "/" + uuid + "_columns.txt";
     std::ifstream columns_file(columns_path);
     if (!columns_file.is_open()) {
@@ -106,7 +102,6 @@ bool MLFraudDetector::LoadModelByUuid(const std::string& config_dir, const std::
     LOG_INFO() << "Loaded " << feature_names_.size() << " features for uuid " << uuid;
 
 #ifdef HAVE_LIGHTGBM
-    // Загрузить LightGBM модель (опционально)
     std::string lgbm_path = config_dir + "/" + uuid + "_lgbm.txt";
     std::ifstream lgbm_check(lgbm_path);
     if (lgbm_check.good()) {
@@ -122,7 +117,6 @@ bool MLFraudDetector::LoadModelByUuid(const std::string& config_dir, const std::
     }
 #endif
 
-    // Загрузить XGBoost модель
     std::string xgb_path = config_dir + "/" + uuid + ".xgb";
     std::ifstream xgb_check(xgb_path);
     if (!xgb_check.good()) {
@@ -148,12 +142,10 @@ int64_t MLFraudDetector::ParseTimestamp(const std::string& timestamp_str) {
     std::string t = Trim(timestamp_str);
     if (t.empty()) return 0;
     
-    // Если содержит 'T' - это ISO формат
     if (t.find('T') != std::string::npos) {
         return static_cast<int64_t>(ParseIsoToEpochSeconds(t));
     }
     
-    // Иначе пытаемся как число
     try {
         return std::stoll(t);
     } catch (...) {
@@ -170,7 +162,6 @@ AccountStats MLFraudDetector::ComputeAccountStats(
     
     AccountStats out;
     
-    // Получить историю транзакций из БД/Redis
     auto history = provider.GetAccountHistory(account_id, current_ts);
     
     if (history.empty()) {
@@ -178,50 +169,42 @@ AccountStats MLFraudDetector::ComputeAccountStats(
         return out;
     }
     
-    // Вычисление статистики
     int64_t n = 0;
     double mean = 0.0, m2 = 0.0;
     int64_t last_before = 0;
     int64_t cnt_window = 0;
     std::unordered_map<std::string, int64_t> loc_counts;
     int64_t total_count = 0;
-    const int64_t window_start = current_ts - 86400;  // 24 часа
+    const int64_t window_start = current_ts - 86400;
     
     for (const auto& txn : history) {
         int64_t ts = ParseTimestamp(txn.timestamp());
         double amt = txn.amount();
         
-        // Логарифмическая трансформация суммы для стабилизации дисперсии
         double amt_log = std::log1p(std::max(0.0, static_cast<double>(amt)));
         
-        // Онлайн вычисление среднего и дисперсии (алгоритм Велфорда)
         n += 1;
         double delta = amt_log - mean;
         mean += delta / static_cast<double>(n);
         m2 += delta * (amt_log - mean);
         
-        // Время с последней транзакции
         if (ts < current_ts && ts > last_before) {
             last_before = ts;
         }
         
-        // Количество транзакций за последние 24 часа
         if (ts >= window_start && ts < current_ts) {
             cnt_window++;
         }
         
-        // Подсчет локаций
         std::string loc = txn.location();
         loc_counts[loc] += 1;
         total_count++;
     }
     
-    // Время с последней транзакции
     out.time_since_last_transaction = (last_before > 0) 
         ? static_cast<double>(current_ts - last_before) 
         : 0.0;
     
-    // Отклонение текущей суммы от среднего
     double current_amt_log = std::log1p(std::max(0.0, current_amount));
     double stddev = 0.0;
     if (n > 0) {
@@ -232,10 +215,8 @@ AccountStats MLFraudDetector::ComputeAccountStats(
         ? ((current_amt_log - mean) / stddev) 
         : 0.0;
     
-    // Скорость транзакций (velocity)
     out.velocity_score = static_cast<double>(cnt_window);
     
-    // Географическая аномалия
     int64_t loc_cnt = 0;
     auto it = loc_counts.find(current_location);
     if (it != loc_counts.end()) {
@@ -274,7 +255,6 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
         }
     };
     
-    // Числовые признаки
     double amount_trans = std::log1p(std::max(0.0, static_cast<double>(txn.amount())));
     set_feature("amount", amount_trans);
     set_feature("time_since_last_transaction", stats.time_since_last_transaction);
@@ -282,7 +262,6 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
     set_feature("velocity_score", stats.velocity_score);
     set_feature("geo_anomaly_score", stats.geo_anomaly_score);
     
-    // Временные признаки
     int64_t timestamp = ParseTimestamp(txn.timestamp());
     std::time_t t = static_cast<std::time_t>(timestamp);
     std::tm tm_utc;
@@ -293,18 +272,16 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
 #endif
     
     int hour = tm_utc.tm_hour;
-    int dayofweek = (tm_utc.tm_wday + 6) % 7;  // Понедельник = 0
+    int dayofweek = (tm_utc.tm_wday + 6) % 7;
     set_feature("hour_of_day", static_cast<double>(hour));
     set_feature("day_of_week", static_cast<double>(dayofweek));
     
-    // Категориальные признаки (one-hot encoding)
     auto set_categorical = [&](const std::string& prefix, const std::string& value) {
         std::string feature_name = prefix + (value.empty() ? "nan" : value);
         auto it = feature_index_map_.find(feature_name);
         if (it != feature_index_map_.end()) {
             vec[it->second] = 1.0f;
         } else {
-            // Если категория неизвестна, используем 'nan'
             std::string nan_name = prefix + "nan";
             auto it_nan = feature_index_map_.find(nan_name);
             if (it_nan != feature_index_map_.end()) {
@@ -313,7 +290,6 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
         }
     };
     
-    // Преобразование enum TransactionType в строку
     std::string transaction_type_str;
     switch (txn.transaction_type()) {
         case transaction::Transaction::DEPOSIT:
@@ -337,7 +313,6 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
     set_categorical("merchant_category_", txn.merchant_category());
     set_categorical("location_", txn.location());
     
-    // Преобразование DeviceUsed enum в строку
     std::string device_str;
     switch (txn.device_used()) {
         case transaction::Transaction::ATM:
@@ -358,7 +333,6 @@ std::vector<float> MLFraudDetector::CreateFeatureVector(
     }
     set_categorical("device_used_", device_str);
     
-    // Преобразование PaymentChannel enum в строку
     std::string channel_str;
     switch (txn.payment_channel()) {
         case transaction::Transaction::ACH:
@@ -390,16 +364,13 @@ double MLFraudDetector::PredictFraudProbability(
         throw std::runtime_error("XGBoost model not loaded");
     }
     
-    // Получить sender_account для вычисления признаков
     std::string sender = txn.sender_account();
     int64_t timestamp = ParseTimestamp(txn.timestamp());
     double amount = static_cast<double>(txn.amount());
     std::string location = txn.location();
     
-    // Вычислить статистику аккаунта
     AccountStats stats = ComputeAccountStats(sender, timestamp, amount, location, provider);
     
-    // Опционально: запустить LightGBM (stage 1) для логирования
 #ifdef HAVE_LIGHTGBM
     if (lgbm_model_) {
         std::vector<double> lgbm_feats;
@@ -409,10 +380,8 @@ double MLFraudDetector::PredictFraudProbability(
         lgbm_feats.push_back(stats.velocity_score);
         lgbm_feats.push_back(stats.geo_anomaly_score);
         
-        // Дополнительные нули для паддинга (если модель требует)
         for (int i = 0; i < 5; ++i) lgbm_feats.push_back(0.0);
         
-        // Временные признаки
         std::time_t t = static_cast<std::time_t>(timestamp);
         std::tm tm_utc;
 #if defined(_WIN32)
@@ -433,10 +402,8 @@ double MLFraudDetector::PredictFraudProbability(
     }
 #endif
     
-    // Создать вектор признаков для XGBoost
     std::vector<float> xgb_input = CreateFeatureVector(txn, stats);
     
-    // Создать DMatrix для предсказания
     DMatrixHandle dmat;
     if (XGDMatrixCreateFromMat(xgb_input.data(), 1, 
                                static_cast<bst_ulong>(xgb_input.size()), 
@@ -444,7 +411,6 @@ double MLFraudDetector::PredictFraudProbability(
         throw std::runtime_error("XGDMatrixCreateFromMat failed");
     }
     
-    // Предсказание
     bst_ulong out_len = 0;
     const float* out_result = nullptr;
     if (XGBoosterPredict(xgb_model_, dmat, 0, 0, 0, &out_len, &out_result) != 0) {
