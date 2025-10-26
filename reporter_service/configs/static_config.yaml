@@ -1,0 +1,75 @@
+components_manager:
+    coro_pool:
+        initial_size: 500
+        max_size: 1000
+        stack_size: 262144
+        stack_usage_monitor_enabled: false
+        
+    components:
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $LOG_LEVEL
+                    level#fallback: warning
+                    overflow_behavior: discard
+                    format: $LOG_FORMAT
+                    format#fallback: raw
+
+        secdist:
+            provider: default-secdist-provider
+            
+        default-secdist-provider:
+            config: configs/secdist.json
+            missing-ok: true
+
+        kafka-consumer:
+            group_id: $KAFKA_CONSUMER_GROUP_ID
+            group_id#fallback: reporter-group
+            topics: $KAFKA_TOPICS_RULE_RESULT_NAMES
+            topics#fallback:
+                - rule-results
+            auto_offset_reset: smallest
+            max_batch_size: $KAFKA_MAX_BATCH_SIZE
+            max_batch_size#fallback: 5
+            security_protocol: PLAINTEXT
+
+        rule-result-consumer:
+
+        server:
+            listener:
+                port: $HTTP_PORT
+                port#fallback: 8092
+                task_processor: main-task-processor
+
+    task_processors:
+        fs-task-processor:
+            worker_threads: $FS_WORKER_THREADS
+            worker_threads#fallback: 2
+            thread_name: fs-worker
+        
+        consumer-blocking-task-processor:
+            worker_threads: $CONSUMER_WORKER_THREADS
+            worker_threads#fallback: 2
+            thread_name: consumer-worker
+            
+        grpc-blocking-task-processor:
+            worker_threads: $GRPC_WORKER_THREADS
+            worker_threads#fallback: 2
+            thread_name: grpc-worker
+
+        consumer-task-processor:
+            worker_threads: $CONSUMER_WORKER_THREADS
+            worker_threads#fallback: 2
+            thread_name: producer
+
+        main-task-processor:
+            worker_threads: $MAIN_WORKER_THREADS
+            worker_threads#fallback: 8
+            thread_name: main-worker
+
+        # director-producer-task-processor:
+        #     worker_threads: $DIRECTOR_WORKER_THREADS
+        #     worker_threads#fallback: 8
+        #     thread_name: director

@@ -1,0 +1,1 @@
+add_subdirectory(rule_result_consumer)

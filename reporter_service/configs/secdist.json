@@ -1,0 +1,7 @@
+{
+    "kafka_settings": {
+        "kafka-consumer": {
+            "brokers": "kafka:29092"
+        }
+    }
+}
