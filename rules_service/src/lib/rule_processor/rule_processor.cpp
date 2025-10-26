@@ -5,8 +5,6 @@
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/schema.hpp>
-#include <grpcpp/create_channel.h>
-#include <grpcpp/security/credentials.h>
 
 namespace fraud_detection {
 
@@ -15,12 +13,27 @@ RuleProcessor::RuleProcessor(
     const userver::components::ComponentContext& context)
     : LoggableComponentBase(config, context),
       consumer_(context.FindComponent<userver::kafka::ConsumerComponent>("kafka-consumer")),
+      producer_(context.FindComponent<userver::kafka::ProducerComponent>("kafka-producer")),
       request_topic_(config["request_topic"].As<std::string>("Request")),
-      result_service_endpoint_(config["result_service_endpoint"].As<std::string>("localhost:50051")),
+      response_topic_(config["response_topic"].As<std::string>("Response")),
       consumer_scope_(consumer_.GetConsumer()) {
     try {
         auto& pg_component = context.FindComponent<userver::components::Postgres>("postgres-db-1");
         auto pg_cluster = pg_component.GetCluster();
+
+        try {
+            LOG_INFO() << "Pinging PostgreSQL cluster";
+            auto ping = pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");
+            if (!ping.IsEmpty()) {
+                LOG_INFO() << "PostgreSQL ping successful";
+            } else {
+                LOG_WARNING() << "PostgreSQL ping returned empty result";
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "PostgreSQL ping failed: " << e.what();
+            throw;
+        }
+
         history_service_ = std::make_shared<TransactionHistoryService>(pg_cluster);
         history_provider_ = std::make_shared<RedisHistoryProvider>(history_service_);
         LOG_INFO() << "TransactionHistoryService initialized with PostgreSQL";
@@ -35,14 +48,10 @@ RuleProcessor::RuleProcessor(
         "/workspaces/repozitorij-dlya-raboty-7408/rules_service/model_configs");
     
 
-    auto channel = grpc::CreateChannel(
-        result_service_endpoint_,
-        grpc::InsecureChannelCredentials()
-    );
-    result_service_stub_ = rules::ResultService::NewStub(channel);
+    result_producer_ = std::make_unique<KafkaResultProducer>(producer_);
     
     LOG_INFO() << "RuleProcessor initialized. Listening to topic: " << request_topic_;
-    LOG_INFO() << "Result service endpoint: " << result_service_endpoint_;
+    LOG_INFO() << "Response topic: " << response_topic_;
     consumer_scope_.Start([this](userver::kafka::MessageBatchView messages) {
         LOG_INFO() << "Received batch of " << messages.size() << " messages";
         for (const auto& msg : messages) {
@@ -98,7 +107,7 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
         }
         
         if (request.rule().rule_type() == rules::RuleConfig::ML && ml_detector_ && history_provider_) {
-            std::string uuid = request.rule().uuid();
+            std::string uuid = request.rule().ml_rule().model_uuid();
             if (!ml_detector_->LoadModelByUuid(model_config_dir_, uuid)) {
                 result.set_status(rules::RuleResult::ERROR);
                 result.set_description("Model config not found for uuid: " + uuid);
@@ -156,23 +165,7 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
 }
 
 void RuleProcessor::SendResultToService(const rules::RuleResult& result) {
-    grpc::ClientContext context;
-    rules::SendResultResponse response;
-    
-    grpc::Status status = result_service_stub_->SendResult(&context, result, &response);
-    
-    if (status.ok()) {
-        if (response.success()) {
-            LOG_INFO() << "Successfully sent result to service for config: " 
-                      << result.config_uuid() << ", status: " << result.status();
-        } else {
-            LOG_WARNING() << "Result sent but service returned failure: " 
-                         << response.message();
-        }
-    } else {
-        LOG_ERROR() << "Failed to send result to service: " 
-                   << status.error_code() << ": " << status.error_message();
-    }
+    result_producer_->SendResult(result, response_topic_);
 }
 
 userver::yaml_config::Schema RuleProcessor::GetStaticConfigSchema() {
@@ -185,10 +178,10 @@ properties:
         type: string
         description: Kafka topic for incoming rule requests
         defaultDescription: Request
-    result_service_endpoint:
+    response_topic:
         type: string
-        description: gRPC endpoint for sending results
-        defaultDescription: localhost:50051
+        description: Kafka topic for outgoing rule results
+        defaultDescription: Response
     ml_model_config_dir:
         type: string
         description: Directory containing ML model files

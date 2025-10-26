@@ -22,6 +22,8 @@ public:
         int minutes,
         int limit = 100) const;
 
+    float ExecuteAggregateQuery(const std::string& sql, const std::string& param) const;
+    float ExecuteAggregateQuery(const std::string& sql, const std::vector<std::string>& params) const;
 private:
     std::string TransactionTypeToString(transaction::Transaction::TransactionType type) const;
     std::string DeviceUsedToString(transaction::Transaction::DeviceUsed device) const;

@@ -1,0 +1,6 @@
+Django==5.2.7
+django-grappelli==4.0.1
+grpcio==1.76.0
+grpcio-tools==1.76.0
+protobuf>=6.31.1
+gunicorn==21.2.0

@@ -122,8 +122,6 @@ private:
                 return left == right;
             case rules::ComparisonOperation::NOT_EQUAL:
                 return left != right;
-            case rules::ComparisonOperation::LIKE:
-                return left.find(right) != std::string::npos;
             default:
                 throw std::runtime_error("Invalid operator for string comparison");
         }

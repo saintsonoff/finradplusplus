@@ -21,23 +21,6 @@ bool PatternRuleAnalyzer::IsFraudTransaction(const transaction::Transaction& tra
     return EvaluateExpression(transaction, rule_config_.pattern_rule().expression());
 }
 
-std::vector<transaction::Transaction> PatternRuleAnalyzer::GetRelevantTransactions(
-    const transaction::Transaction& current_transaction) const {
-    
-    if (!history_service_) {
-        return {};
-    }
-    
-    const std::string& sender_account = current_transaction.sender_account();
-    int32_t max_delta = rule_config_.pattern_rule().max_delta_time();
-    
-    if (max_delta > 0) {
-        int minutes = max_delta / 60;
-        return history_service_->GetRecentTransactions(sender_account, minutes, 100);
-    }
-    
-    return history_service_->GetAccountHistory(sender_account, 100);
-}
 
 rule_utils::ExpressionValue PatternRuleAnalyzer::EvaluateExpressionValue(
     const transaction::Transaction& transaction,
@@ -123,142 +106,90 @@ bool PatternRuleAnalyzer::EvaluateLogical(
     }
 }
 
+
 rule_utils::ExpressionValue PatternRuleAnalyzer::EvaluateAggregate(
     const transaction::Transaction& transaction,
     const rules::AggregateFunction& agg) const {
+    if (!history_service_) throw std::runtime_error("No history service for SQL aggregate");
 
-    auto relevant_txs = GetRelevantTransactions(transaction);
+    std::string sender_account = transaction.sender_account();
+    int64_t last_ts = 0;
+    if (!transaction.timestamp().empty()) {
+        try {
+            last_ts = std::stoll(transaction.timestamp());
+        } catch (...) {}
+    }
+    int max_delta_time = 0;
+    int max_count = 0;
+    if (rule_config_.has_pattern_rule()) {
+        max_delta_time = rule_config_.pattern_rule().max_delta_time();
+        max_count = rule_config_.pattern_rule().max_count();
+    }
+
+    std::string sql;
+    std::vector<std::string> params;
+    params.push_back(sender_account);
+    if (max_delta_time > 0) params.push_back(std::to_string(last_ts));
+    if (max_delta_time > 0) params.push_back(std::to_string(max_delta_time));
+    if (max_count > 0) params.push_back(std::to_string(max_count));
+
+    std::string field_name;
+    if (agg.operand().expr_case() == rules::Expression::kField) {
+        switch (agg.operand().field().field()) {
+            case rules::FieldReference::AMOUNT: field_name = "amount"; break;
+            case rules::FieldReference::MERCHANT_CATEGORY: field_name = "merchant_category"; break;
+            case rules::FieldReference::LOCATION: field_name = "location"; break;
+            case rules::FieldReference::DEVICE_USED: field_name = "device_used"; break;
+            case rules::FieldReference::PAYMENT_CHANNEL: field_name = "payment_channel"; break;
+            case rules::FieldReference::TRANSACTION_TYPE: field_name = "transaction_type"; break;
+            case rules::FieldReference::RECEIVER_ACCOUNT: field_name = "receiver_account"; break;
+            case rules::FieldReference::SENDER_ACCOUNT: field_name = "sender_account"; break;
+            default: throw std::runtime_error("Unsupported field for SQL aggregate");
+        }
+    }
+
+    std::string where = "sender_account = $1";
+    int param_idx = 2;
+    if (max_delta_time > 0) {
+        where += " AND times_tamp >= to_timestamp($" + std::to_string(param_idx) + ") - INTERVAL '1 second' * $" + std::to_string(param_idx+1);
+        param_idx += 2;
+    }
+    std::string limit_clause;
+    if (max_count > 0) {
+        limit_clause = " ORDER BY times_tamp DESC LIMIT $" + std::to_string(param_idx);
+    }
 
     switch (agg.function()) {
         case rules::AggregateFunction::COUNT:
-            return static_cast<int32_t>(relevant_txs.size());
-
+            sql = "SELECT COUNT(*) FROM transactions WHERE " + where + limit_clause;
+            break;
         case rules::AggregateFunction::SUM:
-            if (agg.operand().expr_case() != rules::Expression::kField) {
-                throw std::runtime_error("SUM aggregate requires a field operand");
-            }
-            return ComputeSum(relevant_txs, agg.operand().field().field());
-
+            sql = "SELECT SUM(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
+            break;
         case rules::AggregateFunction::AVG:
-            if (agg.operand().expr_case() != rules::Expression::kField) {
-                throw std::runtime_error("AVG aggregate requires a field operand");
-            }
-            return ComputeAvg(relevant_txs, agg.operand().field().field());
-
+            sql = "SELECT AVG(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
+            break;
         case rules::AggregateFunction::MIN:
-            if (agg.operand().expr_case() != rules::Expression::kField) {
-                throw std::runtime_error("MIN aggregate requires a field operand");
-            }
-            return ComputeMin(relevant_txs, agg.operand().field().field());
-
+            sql = "SELECT MIN(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
+            break;
         case rules::AggregateFunction::MAX:
-            if (agg.operand().expr_case() != rules::Expression::kField) {
-                throw std::runtime_error("MAX aggregate requires a field operand");
-            }
-            return ComputeMax(relevant_txs, agg.operand().field().field());
-
+            sql = "SELECT MAX(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
+            break;
         case rules::AggregateFunction::COUNT_DISTINCT:
-            if (agg.operand().expr_case() != rules::Expression::kField) {
-                throw std::runtime_error("COUNT_DISTINCT requires a field operand");
-            }
-            return ComputeCountDistinct(relevant_txs, agg.operand().field().field());
-
+            sql = "SELECT COUNT(DISTINCT " + field_name + ") FROM transactions WHERE " + where + limit_clause;
+            break;
         default:
             throw std::runtime_error("Unknown aggregate function");
     }
-}
 
-float PatternRuleAnalyzer::ComputeSum(
-    const std::vector<transaction::Transaction>& txs,
-    rules::FieldReference::FieldType field) const {
-    
-    float sum = 0.0f;
-    for (const auto& tx : txs) {
-        auto value = rule_utils::FieldExtractor::GetFieldValue(tx, field);
-        
-        if (std::holds_alternative<float>(value)) {
-            sum += std::get<float>(value);
-        } else if (std::holds_alternative<int32_t>(value)) {
-            sum += std::get<int32_t>(value);
-        }
+    float result = history_service_->ExecuteAggregateQuery(sql, params);
+
+    if (agg.function() == rules::AggregateFunction::COUNT || agg.function() == rules::AggregateFunction::COUNT_DISTINCT) {
+        return static_cast<int32_t>(result);
+    } else {
+        return result;
     }
-    return sum;
 }
 
-float PatternRuleAnalyzer::ComputeAvg(
-    const std::vector<transaction::Transaction>& txs,
-    rules::FieldReference::FieldType field) const {
-    
-    if (txs.empty()) return 0.0f;
-    return ComputeSum(txs, field) / txs.size();
-}
 
-float PatternRuleAnalyzer::ComputeMin(
-    const std::vector<transaction::Transaction>& txs,
-    rules::FieldReference::FieldType field) const {
-    
-    if (txs.empty()) {
-        throw std::runtime_error("MIN on empty set");
-    }
-
-    float min_val = std::numeric_limits<float>::max();
-    for (const auto& tx : txs) {
-        auto value = rule_utils::FieldExtractor::GetFieldValue(tx, field);
-        
-        if (std::holds_alternative<float>(value)) {
-            min_val = std::min(min_val, std::get<float>(value));
-        } else if (std::holds_alternative<int32_t>(value)) {
-            min_val = std::min(min_val, static_cast<float>(std::get<int32_t>(value)));
-        }
-    }
-    return min_val;
-}
-
-float PatternRuleAnalyzer::ComputeMax(
-    const std::vector<transaction::Transaction>& txs,
-    rules::FieldReference::FieldType field) const {
-    
-    if (txs.empty()) {
-        throw std::runtime_error("MAX on empty set");
-    }
-
-    float max_val = std::numeric_limits<float>::lowest();
-    for (const auto& tx : txs) {
-        auto value = rule_utils::FieldExtractor::GetFieldValue(tx, field);
-        
-        if (std::holds_alternative<float>(value)) {
-            max_val = std::max(max_val, std::get<float>(value));
-        } else if (std::holds_alternative<int32_t>(value)) {
-            max_val = std::max(max_val, static_cast<float>(std::get<int32_t>(value)));
-        }
-    }
-    return max_val;
-}
-
-int32_t PatternRuleAnalyzer::ComputeCountDistinct(
-    const std::vector<transaction::Transaction>& txs,
-    rules::FieldReference::FieldType field) const {
-    
-    std::unordered_set<std::string> distinct_values;
-    
-    for (const auto& tx : txs) {
-        auto value = rule_utils::FieldExtractor::GetFieldValue(tx, field);
-        
-        std::string str_value;
-        if (std::holds_alternative<std::string>(value)) {
-            str_value = std::get<std::string>(value);
-        } else if (std::holds_alternative<float>(value)) {
-            str_value = std::to_string(std::get<float>(value));
-        } else if (std::holds_alternative<int32_t>(value)) {
-            str_value = std::to_string(std::get<int32_t>(value));
-        } else if (std::holds_alternative<bool>(value)) {
-            str_value = std::get<bool>(value) ? "true" : "false";
-        }
-        
-        distinct_values.insert(str_value);
-    }
-    
-    return static_cast<int32_t>(distinct_values.size());
-}
-
-}
+} // namespace fraud_detection

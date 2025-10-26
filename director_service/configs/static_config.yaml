@@ -12,7 +12,7 @@ components_manager:
                 default:
                     file_path: '@stderr'
                     level: $LOG_LEVEL
-                    level#fallback: warning
+                    level#fallback: info
                     overflow_behavior: discard
                     format: $LOG_FORMAT
                     format#fallback: raw
@@ -37,7 +37,7 @@ components_manager:
         director-producer:
             task-processor: director-producer-task-processor
             topic: $KAFKA_TOPIC
-            topic#fallback: "my-first-topic"
+            topic#fallback: "Request"
 
         grpc-server:
             port: $GRPC_PORT

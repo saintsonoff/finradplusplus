@@ -12,6 +12,9 @@ TransactionHistoryService::TransactionHistoryService(
 void TransactionHistoryService::SaveTransaction(
     const transaction::Transaction& tx) {
     try {
+        LOG_DEBUG() << "SaveTransaction: executing INSERT for transaction: " << tx.transaction_id()
+                    << " account: " << tx.sender_account();
+
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster,
             "INSERT INTO transactions "
@@ -35,7 +38,7 @@ void TransactionHistoryService::SaveTransaction(
             tx.device_hash()
         );
         
-        LOG_DEBUG() << "Saved transaction " << tx.transaction_id() 
+        LOG_INFO() << "Saved transaction " << tx.transaction_id() 
                    << " to PostgreSQL for account " << tx.sender_account();
     } catch (const std::exception& e) {
         LOG_ERROR() << "Failed to save transaction to PostgreSQL: " << e.what();
@@ -51,7 +54,7 @@ TransactionHistoryService::GetAccountHistory(
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
             "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
-            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "receiver_account, amount::double precision as amount, transaction_type::text, merchant_category, location, "
             "device_used::text, payment_channel::text, ip_address, device_hash "
             "FROM transactions "
             "WHERE sender_account = $1 "
@@ -79,7 +82,7 @@ TransactionHistoryService::GetAccountHistory(
             history.push_back(std::move(tx));
         }
         
-        LOG_DEBUG() << "Retrieved " << history.size() 
+        LOG_INFO() << "Retrieved " << history.size() 
                    << " transactions for account " << account_id;
     } catch (const std::exception& e) {
         LOG_ERROR() << "Failed to get transaction history from PostgreSQL: " 
@@ -98,7 +101,7 @@ TransactionHistoryService::GetRecentTransactions(
         auto result = pg_cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kSlave,
             "SELECT transaction_id, sender_account, EXTRACT(EPOCH FROM times_tamp)::bigint as timestamp, "
-            "receiver_account, amount, transaction_type::text, merchant_category, location, "
+            "receiver_account, amount::double precision as amount, transaction_type::text, merchant_category, location, "
             "device_used::text, payment_channel::text, ip_address, device_hash "
             "FROM transactions "
             "WHERE sender_account = $1 "
@@ -128,7 +131,7 @@ TransactionHistoryService::GetRecentTransactions(
             recent.push_back(std::move(tx));
         }
         
-        LOG_DEBUG() << "Retrieved " << recent.size() 
+        LOG_INFO() << "Retrieved " << recent.size() 
                    << " recent transactions (last " << minutes 
                    << " minutes) for account " << account_id;
     } catch (const std::exception& e) {
@@ -138,7 +141,65 @@ TransactionHistoryService::GetRecentTransactions(
     return recent;
 }
 
-// Enum conversion helpers
+float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, const std::string& param) const {
+    return ExecuteAggregateQuery(sql, std::vector<std::string>{param});
+}
+
+float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, const std::vector<std::string>& params) const {
+    try {
+        LOG_DEBUG() << "ExecuteAggregateQuery SQL: " << sql;
+        for (size_t i = 0; i < params.size(); ++i) {
+            LOG_DEBUG() << "  param[" << (i+1) << "] = " << params[i];
+        }
+
+        userver::storages::postgres::ResultSet result_set =
+            [&]() -> userver::storages::postgres::ResultSet {
+                switch (params.size()) {
+                    case 1:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0]);
+                    case 3:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0], params[1], params[2]);
+                    case 4:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0], params[1], params[2], params[3]);
+                    default:
+                        throw std::runtime_error("Unsupported number of parameters for ExecuteAggregateQuery");
+                }
+            }();
+
+        if (result_set.IsEmpty()) {
+            LOG_DEBUG() << "ExecuteAggregateQuery: result set is empty";
+            return 0.0f;
+        }
+
+        if (result_set[0][0].IsNull()) {
+            LOG_DEBUG() << "ExecuteAggregateQuery: aggregate result is NULL (empty set), returning 0.0f";
+            return 0.0f;
+        }
+
+        try {
+            int64_t ival = result_set[0][0].As<int64_t>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw int64 result = " << ival;
+            return static_cast<float>(ival);
+        } catch (...) {}
+        try {
+            double dval = result_set[0][0].As<double>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw double result = " << dval;
+            return static_cast<float>(dval);
+        } catch (...) {}
+        try {
+            float fval = result_set[0][0].As<float>();
+            LOG_DEBUG() << "ExecuteAggregateQuery: raw float result = " << fval;
+            return fval;
+        } catch (...) {}
+
+        LOG_DEBUG() << "ExecuteAggregateQuery: unknown type for aggregate column, returning 0.0f";
+        return 0.0f;
+    } catch (const std::exception& e) {
+        LOG_ERROR() << "Failed to execute aggregate SQL: " << e.what();
+        return 0.0f;
+    }
+}
+
 std::string TransactionHistoryService::TransactionTypeToString(
     transaction::Transaction::TransactionType type) const {
     switch (type) {
