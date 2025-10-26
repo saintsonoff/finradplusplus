@@ -6,7 +6,8 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/schema.hpp>
 
-
+namespace fraud_detection {
+    
 RuleProcessor::RuleProcessor(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -108,10 +109,9 @@ void RuleProcessor::ProcessMessage(const std::string& message) {
         if (request.rule().rule_type() == rules::RuleConfig::ML && ml_detector_ && history_provider_) {
             std::string uuid = request.rule().ml_rule().model_uuid();
             if (!ml_detector_->LoadModelByUuid(model_config_dir_, uuid)) {
-                std::string dir_contents = GetDirectoryContents(model_config_dir_);
                 result.set_status(rules::RuleResult::ERROR);
-                result.set_description("Model config not found for uuid: " + uuid + " by path: " + model_config_dir_ + ". Directory contents: " + dir_contents);
-                LOG_ERROR() << "Model config not found for uuid: " << uuid << " in " << model_config_dir_ << ". Contents: " << dir_contents;
+                result.set_description("Model config not found for uuid: " + uuid);
+                LOG_ERROR() << "Model config not found for uuid: " << uuid;
             } else {
                 double fraud_probability = ml_detector_->PredictFraudProbability(request.transaction(), *history_provider_);
                 double threshold = request.rule().ml_rule().lower_bound();
