@@ -57,3 +57,25 @@ class RuleConfig(models.Model):
 
     def __str__(self):
         return self.name
+
+class RuleResult(models.Model):
+    class StatusEnum(models.TextChoices):
+        ERROR = 'ERROR', 'Error'
+        NOT_FRAUD = 'NOT_FRAUD', 'Not Fraud'
+        FRAUD = 'FRAUD', 'Fraud'
+
+    profile_uuid = models.UUIDField()
+    profile_name = models.CharField(max_length=255)
+    config_uuid = models.UUIDField()
+    config_name = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=StatusEnum.choices)
+    transaction_id = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'rule_results'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_id} - {self.status}"
