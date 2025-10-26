@@ -87,13 +87,6 @@ services:
       - "8092:8092"
     networks:
       - app-network
-    environment:
-      - GRPC_PORT=8030
-      - HTTP_PORT=8092
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - KAFKA_TOPIC=Request
-      - LOG_LEVEL=info
-      - LOG_FORMAT=tskv
     depends_on:
       - kafka
       - kafka-topic-creator

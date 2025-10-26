@@ -1,0 +1,24 @@
+# Logging configuration
+log_level: error
+log_format: raw
+
+# Kafka configuration
+kafka_bootstrap_servers: kafka:29092
+kafka_topic: Request
+
+# Server ports
+http_port: 8092
+grpc_port: 8030
+
+# Task processor worker threads
+fs_workers: 2
+grpc_workers: 2
+producer_workers: 2
+main_workers: 8
+director_workers: 8
+
+# Coro pool configuration
+coro_pool_initial_size: 500
+coro_pool_max_size: 1000
+coro_pool_stack_size: 262144
+coro_pool_monitor_enabled: false
