@@ -22,7 +22,6 @@ RuleProcessor::RuleProcessor(
         auto& pg_component = context.FindComponent<userver::components::Postgres>("postgres-db-1");
         auto pg_cluster = pg_component.GetCluster();
 
-        // Quick connectivity check
         try {
             LOG_INFO() << "Pinging PostgreSQL cluster";
             auto ping = pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");
@@ -33,7 +32,7 @@ RuleProcessor::RuleProcessor(
             }
         } catch (const std::exception& e) {
             LOG_ERROR() << "PostgreSQL ping failed: " << e.what();
-            throw; // let outer catch handle disabling history_service_
+            throw;
         }
 
         history_service_ = std::make_shared<TransactionHistoryService>(pg_cluster);

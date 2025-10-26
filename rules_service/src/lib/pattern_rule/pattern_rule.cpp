@@ -113,10 +113,26 @@ rule_utils::ExpressionValue PatternRuleAnalyzer::EvaluateAggregate(
     if (!history_service_) throw std::runtime_error("No history service for SQL aggregate");
 
     std::string sender_account = transaction.sender_account();
+    int64_t last_ts = 0;
+    if (!transaction.timestamp().empty()) {
+        try {
+            last_ts = std::stoll(transaction.timestamp());
+        } catch (...) {}
+    }
+    int max_delta_time = 0;
+    int max_count = 0;
+    if (rule_config_.has_pattern_rule()) {
+        max_delta_time = rule_config_.pattern_rule().max_delta_time();
+        max_count = rule_config_.pattern_rule().max_count();
+    }
+
     std::string sql;
-    // pass single param (sender_account) to ExecuteAggregateQuery to avoid text[] being sent
-    // Do NOT add SQL quotes here — driver will bind the parameter correctly.
-    std::string param = sender_account;
+    std::vector<std::string> params;
+    params.push_back(sender_account);
+    if (max_delta_time > 0) params.push_back(std::to_string(last_ts));
+    if (max_delta_time > 0) params.push_back(std::to_string(max_delta_time));
+    if (max_count > 0) params.push_back(std::to_string(max_count));
+
     std::string field_name;
     if (agg.operand().expr_case() == rules::Expression::kField) {
         switch (agg.operand().field().field()) {
@@ -132,29 +148,42 @@ rule_utils::ExpressionValue PatternRuleAnalyzer::EvaluateAggregate(
         }
     }
 
+    std::string where = "sender_account = $1";
+    int param_idx = 2;
+    if (max_delta_time > 0) {
+        where += " AND times_tamp >= to_timestamp($" + std::to_string(param_idx) + ") - INTERVAL '1 second' * $" + std::to_string(param_idx+1);
+        param_idx += 2;
+    }
+    std::string limit_clause;
+    if (max_count > 0) {
+        limit_clause = " ORDER BY times_tamp DESC LIMIT $" + std::to_string(param_idx);
+    }
+
     switch (agg.function()) {
         case rules::AggregateFunction::COUNT:
-            sql = "SELECT COUNT(*) FROM transactions WHERE sender_account = $1";
+            sql = "SELECT COUNT(*) FROM transactions WHERE " + where + limit_clause;
             break;
         case rules::AggregateFunction::SUM:
-            sql = "SELECT SUM(" + field_name + ") FROM transactions WHERE sender_account = $1";
+            sql = "SELECT SUM(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
             break;
         case rules::AggregateFunction::AVG:
-            sql = "SELECT AVG(" + field_name + ") FROM transactions WHERE sender_account = $1";
+            sql = "SELECT AVG(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
             break;
         case rules::AggregateFunction::MIN:
-            sql = "SELECT MIN(" + field_name + ") FROM transactions WHERE sender_account = $1";
+            sql = "SELECT MIN(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
             break;
         case rules::AggregateFunction::MAX:
-            sql = "SELECT MAX(" + field_name + ") FROM transactions WHERE sender_account = $1";
+            sql = "SELECT MAX(" + field_name + ") FROM transactions WHERE " + where + limit_clause;
             break;
         case rules::AggregateFunction::COUNT_DISTINCT:
-            sql = "SELECT COUNT(DISTINCT " + field_name + ") FROM transactions WHERE sender_account = $1";
+            sql = "SELECT COUNT(DISTINCT " + field_name + ") FROM transactions WHERE " + where + limit_clause;
             break;
         default:
             throw std::runtime_error("Unknown aggregate function");
     }
-    float result = history_service_->ExecuteAggregateQuery(sql, param);
+
+    float result = history_service_->ExecuteAggregateQuery(sql, params);
+
     if (agg.function() == rules::AggregateFunction::COUNT || agg.function() == rules::AggregateFunction::COUNT_DISTINCT) {
         return static_cast<int32_t>(result);
     } else {

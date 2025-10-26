@@ -142,35 +142,52 @@ TransactionHistoryService::GetRecentTransactions(
 }
 
 float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, const std::string& param) const {
+    return ExecuteAggregateQuery(sql, std::vector<std::string>{param});
+}
+
+float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, const std::vector<std::string>& params) const {
     try {
         LOG_DEBUG() << "ExecuteAggregateQuery SQL: " << sql;
-        LOG_DEBUG() << "  param[1] = " << param;
+        for (size_t i = 0; i < params.size(); ++i) {
+            LOG_DEBUG() << "  param[" << (i+1) << "] = " << params[i];
+        }
 
-        auto result = pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, param);
-        if (result.IsEmpty()) {
+        userver::storages::postgres::ResultSet result_set =
+            [&]() -> userver::storages::postgres::ResultSet {
+                switch (params.size()) {
+                    case 1:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0]);
+                    case 3:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0], params[1], params[2]);
+                    case 4:
+                        return pg_cluster_->Execute(userver::storages::postgres::ClusterHostType::kMaster, sql, params[0], params[1], params[2], params[3]);
+                    default:
+                        throw std::runtime_error("Unsupported number of parameters for ExecuteAggregateQuery");
+                }
+            }();
+
+        if (result_set.IsEmpty()) {
             LOG_DEBUG() << "ExecuteAggregateQuery: result set is empty";
             return 0.0f;
         }
 
-        // Если результат NULL (например, SUM/AVG/MIN/MAX по пустому набору), возвращаем 0.0f
-        if (result[0][0].IsNull()) {
+        if (result_set[0][0].IsNull()) {
             LOG_DEBUG() << "ExecuteAggregateQuery: aggregate result is NULL (empty set), returning 0.0f";
             return 0.0f;
         }
 
-        // Для COUNT всегда int64, для SUM/AVG/… может быть double/float/int64
         try {
-            int64_t ival = result[0][0].As<int64_t>();
+            int64_t ival = result_set[0][0].As<int64_t>();
             LOG_DEBUG() << "ExecuteAggregateQuery: raw int64 result = " << ival;
             return static_cast<float>(ival);
         } catch (...) {}
         try {
-            double dval = result[0][0].As<double>();
+            double dval = result_set[0][0].As<double>();
             LOG_DEBUG() << "ExecuteAggregateQuery: raw double result = " << dval;
             return static_cast<float>(dval);
         } catch (...) {}
         try {
-            float fval = result[0][0].As<float>();
+            float fval = result_set[0][0].As<float>();
             LOG_DEBUG() << "ExecuteAggregateQuery: raw float result = " << fval;
             return fval;
         } catch (...) {}
@@ -183,7 +200,6 @@ float TransactionHistoryService::ExecuteAggregateQuery(const std::string& sql, c
     }
 }
 
-// Enum conversion helpers
 std::string TransactionHistoryService::TransactionTypeToString(
     transaction::Transaction::TransactionType type) const {
     switch (type) {
