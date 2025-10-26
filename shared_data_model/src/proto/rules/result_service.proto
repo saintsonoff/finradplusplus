@@ -5,7 +5,7 @@ package rules;
 import "rules/rule_result.proto";
 
 service ResultService {
-    rpc SendResult(RuleReult) returns (SendResultResponse);
+    rpc SendResult(RuleResult) returns (SendResultResponse);
 }
 
 message SendResultResponse {
