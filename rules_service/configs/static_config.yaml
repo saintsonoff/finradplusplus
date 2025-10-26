@@ -56,6 +56,7 @@ components_manager:
 
         rule-processor:
             ml_model_config_dir: /workspaces/repozitorij-dlya-raboty-7408/rules_service/model_configs
+            response_topic: Response
 
     task_processors:
         main-task-processor:
