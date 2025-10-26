@@ -19,5 +19,3 @@ PUBLIC
     transaction-proto
     rule_config-proto
 )
-
-userver_add_grpc_library(rule_response-proto PROTOS "${PROTO_FILE_PATH}/rules/rule_response.proto" SOURCE_PATH "${PROTO_FILE_PATH}")

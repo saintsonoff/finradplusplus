@@ -2,12 +2,14 @@
 
 
 // stdcpp
+#include <userver/logging/log.hpp>
 #include <utility>
 #include <string_view>
 
 // userver
 #include <userver/kafka/producer.hpp>
 #include <userver/kafka/exceptions.hpp>
+#include <userver/logging/logger.hpp>
 
 // self
 #include <transaction/transaction.pb.h>
@@ -36,8 +38,8 @@ std::pair<size_t, RuleRequestProducer::SendStatus> RuleRequestProducer::operator
             auto request = rules::RuleRequest{};
             request.set_profile_uuid(profile.name());
             request.set_profile_name(profile.uuid());
-            request.set_allocated_rule(&config);
-            request.set_allocated_transaction(&transaction);
+            request.mutable_rule()->CopyFrom(config);
+            request.mutable_transaction()->CopyFrom(transaction);
             request.set_number(number);
             request.set_total_rule_count(total_rule_count);
 
@@ -50,6 +52,7 @@ std::pair<size_t, RuleRequestProducer::SendStatus> RuleRequestProducer::operator
             producer.Send(topic, key, message);
             return SendStatus::kSuccess;
         } catch (const userver::kafka::SendException& ex) {
+            LOG_ERROR() << "kafka production fail: " << ex.what();
             return ex.IsRetryable() ? SendStatus::kErrorRetryable : SendStatus::kErrorNonRetryable;
         }
     };

@@ -15,4 +15,6 @@ PUBLIC
     transaction-proto
 PUBLIC
     userver::grpc
+PUBLIC
+    director
 )

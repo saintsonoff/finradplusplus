@@ -15,4 +15,6 @@ PUBLIC
     rule_profile-proto
 PUBLIC
     userver::grpc
+PUBLIC
+    director
 )

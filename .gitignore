@@ -4,3 +4,6 @@
 **/.devcontainer
 **/.cache
 **/.vscode
+
+# secret staff
+**/.env

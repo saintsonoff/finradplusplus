@@ -1,28 +1,35 @@
 #include "transaction_receiver.hpp"
 
 // userver
-#include <transaction/transaction.pb.h>
-#include <userver/utest/using_namespace_userver.hpp>
-
 #include <userver/logging/log.hpp> 
+#include <userver/components/component_context.hpp>
+#include <userver/components/component_base.hpp>
 
 // protobuf
 #include <google/protobuf/empty.pb.h>
 
-// self
+// models
 #include <transaction/transaction_service.usrv.pb.hpp>
+#include <transaction/transaction.pb.h>
+
+// self
+#include <director.hpp>
 
 namespace director_service {
 
 
-TransactionReceiver::TransactionReceiver(std::string prefix) 
-    : _prefix(prefix) {  };
+TransactionReceiver::TransactionReceiver(
+    std::string prefix,
+    DirectorComponent::ProcessTransactionCallableType process_callable
+) 
+    : _prefix(prefix), _process_callable(process_callable) {  };
 
 TransactionReceiver::ProcessTransactionResult TransactionReceiver::ProcessTransaction(
   CallContext&, 
   transaction::Transaction&& request) {
-      LOG_INFO() << fmt::format("receive new transaction, id: {}", request.transaction_id());
-      google::protobuf::Empty response;
+    LOG_INFO() << fmt::format("receive new transaction, id: {}", request.transaction_id());
+    _process_callable(std::move(request));
+    google::protobuf::Empty response;
     return response;
 }
 
@@ -30,14 +37,19 @@ TransactionReceiver::~TransactionReceiver() {  }
 
 
 TransactionReceiverComponent::TransactionReceiverComponent(
-    const components::ComponentConfig& config,
-    const components::ComponentContext& context
-) : ugrpc::server::ServiceComponentBase(config, context), _service(config["transaction-prefix"].As<std::string>()) {
+    const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context
+) 
+  : userver::ugrpc::server::ServiceComponentBase(config, context),
+  _service(
+        config["transaction-prefix"].As<std::string>(),
+        context.FindComponent<DirectorComponent>("director-producer").GetProcessTransactionCallable()
+  ) {
     RegisterService(_service);
 }
 
-yaml_config::Schema TransactionReceiverComponent::GetStaticConfigSchema() {
-    return yaml_config::MergeSchemas<ugrpc::server::ServiceComponentBase>(R"(
+userver::yaml_config::Schema TransactionReceiverComponent::GetStaticConfigSchema() {
+    return userver::yaml_config::MergeSchemas<userver::ugrpc::server::ServiceComponentBase>(R"(
 type: object
 description: gRPC profile get service component
 additionalProperties: false

@@ -3,7 +3,6 @@
 
 // stdcpp
 #include <utility>
-#include <string_view>
 
 // userver
 #include <userver/kafka/producer.hpp>

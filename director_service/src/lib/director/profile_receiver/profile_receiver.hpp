@@ -5,13 +5,15 @@
 #include <string_view>
 
 // userver
-#include <userver/utest/using_namespace_userver.hpp>
 #include <userver/ugrpc/server/service_component_base.hpp>
 
-// userver utils
+// another
 #include <fmt/format.h>
 
 // self
+#include <director.hpp>
+
+// models
 #include <rules/profile_service.usrv.pb.hpp>
 
 
@@ -20,29 +22,32 @@ namespace director_service {
 
 class ProfileReceiver final : public profile::ProfileServiceBase {
 public:
-    explicit ProfileReceiver(std::string prefix);
+    explicit ProfileReceiver(std::string prefix, DirectorComponent::UpdateProfilesCallableType update_callable);
 
     ProcessProfileStreamResult ProcessProfileStream(CallContext&, ProcessProfileStreamReader& reader) override;
 
     ~ProfileReceiver() override;
+
 private:
     const std::string _prefix;
+    DirectorComponent::UpdateProfilesCallableType _update_callable;
 };
 
 
 
-class ProfileReceiverComponent final : public ugrpc::server::ServiceComponentBase {
+class ProfileReceiverComponent final : public userver::ugrpc::server::ServiceComponentBase {
 public:
     static constexpr std::string_view kName = "profile-receiver-service";
 
     ProfileReceiverComponent(
-        const components::ComponentConfig& config,
-        const components::ComponentContext& context
+        const userver::components::ComponentConfig& config,
+        const userver::components::ComponentContext& context
     );
 
-static yaml_config::Schema GetStaticConfigSchema();
+    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     ~ProfileReceiverComponent() override = default;
+
 private:
     ProfileReceiver _service;
 };
