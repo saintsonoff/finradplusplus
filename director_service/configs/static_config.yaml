@@ -14,7 +14,8 @@ components_manager:
                     level: $LOG_LEVEL
                     level#fallback: warning
                     overflow_behavior: discard
-                    format: raw
+                    format: $LOG_FORMAT
+                    format#fallback: raw
 
         secdist:
             provider: default-secdist-provider
