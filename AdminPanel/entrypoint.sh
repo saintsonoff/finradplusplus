@@ -10,7 +10,17 @@ done
 echo "PostgreSQL is up - executing migrations"
 
 echo "Running database migrations..."
-python manage.py migrate --noinput
+# Try to apply all migrations
+python manage.py migrate --noinput 2>&1 | tee /tmp/migrate.log || true
+
+# If rule_results table already exists, fake the migration
+if grep -q "rule_results.*already exists" /tmp/migrate.log; then
+    echo "Table rule_results already exists, faking migration..."
+    python manage.py migrate myapp 0002_ruleresult --fake || true
+fi
+
+# Apply any remaining migrations
+python manage.py migrate --noinput || echo "Some migrations may have been skipped"
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

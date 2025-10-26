@@ -17,7 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./AdminPanel/ /app/
 
-RUN chmod +x /app/entrypoint.sh
+# Fix line endings and make executable
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 RUN mkdir -p /app/staticfiles
 

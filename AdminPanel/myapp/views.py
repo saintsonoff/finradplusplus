@@ -3,9 +3,10 @@ from django.http import HttpResponse
 import csv
 from .models import RuleResult
 
-<<<<<<< HEAD
-def index(requset):
+
+def index(request):
     return HttpResponse("Hello you are here")
+
 
 def export_rule_results_csv(request):
     """
@@ -43,7 +44,3 @@ def export_rule_results_csv(request):
         ])
     
     return response
-=======
-def index(request):
-    return HttpResponse("Hello you are here")
->>>>>>> 5bdc9d4a56a527c84961c9497bf28ccc6fe313d0
