@@ -14,6 +14,3 @@
 # python struff
 **/__pycache__/
 **/*.pyc
-
-# userver stuff
-**/secdist.json
